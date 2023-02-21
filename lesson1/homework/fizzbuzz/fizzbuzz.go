@@ -1,6 +1,11 @@
 package fizzbuzz
 
 func FizzBuzz(i int) string {
-	// TODO
-	return ""
+	if i%15 == 0 {
+		return "FizzBuzz"
+	}
+	if i%5 == 0 {
+		return "Buzz"
+	}
+	return "Fizz"
 }
