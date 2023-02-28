@@ -24,11 +24,7 @@ func New() *TagCloud {
 // thread-safety is not needed
 // TODO: You decide whether receiver should be a pointer or a value
 func (tagCloud TagCloud) AddTag(tag string) {
-	if _, hasValue := tagCloud.Stat[tag]; hasValue {
-		tagCloud.Stat[tag] += 1
-	} else {
-		tagCloud.Stat[tag] = 1
-	}
+	tagCloud.Stat[tag] += 1
 }
 
 // TopN should return top N most frequent tags ordered in descending order by occurrence count
