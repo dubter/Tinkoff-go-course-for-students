@@ -159,31 +159,46 @@ func main() {
 		sizeFile = opts.Limit
 	}
 
-	buf := make([]byte, sizeFile)
-	_, err = fromReader.Read(buf)
-	if err != nil && err != io.EOF {
-		_, _ = fmt.Fprintln(os.Stderr, "error reading input file:", err)
-		os.Exit(1)
-	}
-	if opts.Conv != nil {
-		for _, conv := range opts.Conv {
-			switch conv {
-			case "upper_case":
-				buf = []byte(strings.ToUpper(string(buf)))
-			case "lower_case":
-				buf = []byte(strings.ToLower(string(buf)))
-			case "trim_spaces":
-				buf = []byte(strings.TrimSpace(string(buf)))
-			default:
-				_, _ = fmt.Fprintln(os.Stderr, "invalid conversion option:", conv)
-				os.Exit(1)
+	buf := make([]byte, opts.BlockSize)
+	var tmp []byte
+	total := int64(0)
+	for {
+		total += int64(opts.BlockSize)
+		if opts.Limit > 0 && total-opts.Limit > 0 {
+			buf = make([]byte, int64(opts.BlockSize)-(total-opts.Limit))
+		}
+		n, errRead := fromReader.Read(buf)
+		tmp = buf[:n]
+		if errRead != nil && errRead != io.EOF {
+			_, _ = fmt.Fprintln(os.Stderr, "error reading input file:", errRead)
+			os.Exit(1)
+		}
+		if opts.Conv != nil {
+			for _, conv := range opts.Conv {
+				switch conv {
+				case "upper_case":
+					tmp = []byte(strings.ToUpper(string(tmp)))
+				case "lower_case":
+					tmp = []byte(strings.ToLower(string(tmp)))
+				case "trim_spaces":
+					tmp = []byte(strings.TrimSpace(string(tmp)))
+				default:
+					_, _ = fmt.Fprintln(os.Stderr, "invalid conversion option:", conv)
+					os.Exit(1)
+				}
 			}
 		}
-	}
 
-	_, err = toWriter.Write(buf)
-	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, "error writing output file:", err)
-		os.Exit(1)
+		if n == 0 {
+			break
+		}
+		_, err = toWriter.Write(tmp)
+		if err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, "error writing output file:", err)
+			os.Exit(1)
+		}
+		if opts.Limit > 0 && total-opts.Limit > 0 {
+			break
+		}
 	}
 }
