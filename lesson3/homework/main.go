@@ -89,29 +89,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	var sizeFile int64
 	var fromReader io.ReadSeekCloser
+	var toWriter io.WriteCloser
 
 	if opts.From == "" {
 		fromReader = &StdinReader{}
-		stat, err := os.Stdin.Stat()
-		if err != nil {
-			fmt.Println("Ошибка при получении информации о потоке stdin:", err)
-			return
-		}
-		sizeFile = stat.Size()
 	} else {
 		fromReader, err = os.Open(opts.From)
 		if err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, "can not open input file:", err)
 			os.Exit(1)
 		}
-		fileInfo, err := os.Stat(opts.From)
-		if err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "can not get file info:", err)
-			os.Exit(1)
-		}
-		sizeFile = fileInfo.Size()
+
 		defer func(fromReader io.ReadSeekCloser) {
 			err := fromReader.Close()
 			if err != nil {
@@ -121,7 +110,6 @@ func main() {
 		}(fromReader)
 	}
 
-	var toWriter io.WriteCloser
 	if opts.To == "" {
 		toWriter = &StdoutWriter{}
 	} else {
@@ -142,23 +130,11 @@ func main() {
 		}(toWriter)
 	}
 
-	if opts.Offset > 0 {
-		_, err = fromReader.Seek(opts.Offset, io.SeekStart)
+	SeekFileFrom(&fromReader, opts.Offset)
+	TransferInfo(opts, &fromReader, &toWriter)
+}
 
-		if err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "can not seek to offset:", err)
-			os.Exit(1)
-		}
-	} else if opts.Offset < 0 {
-		_, _ = fmt.Fprintln(os.Stderr, "Offset must be non-negative")
-		os.Exit(1)
-	}
-
-	sizeFile -= opts.Offset
-	if opts.Limit > 0 {
-		sizeFile = opts.Limit
-	}
-
+func TransferInfo(opts *Options, fromReader *io.ReadSeekCloser, toWriter *io.WriteCloser) {
 	buf := make([]byte, opts.BlockSize)
 	var tmp []byte
 	total := int64(0)
@@ -167,7 +143,7 @@ func main() {
 		if opts.Limit > 0 && total-opts.Limit > 0 {
 			buf = make([]byte, int64(opts.BlockSize)-(total-opts.Limit))
 		}
-		n, errRead := fromReader.Read(buf)
+		n, errRead := (*fromReader).Read(buf)
 		tmp = buf[:n]
 		if errRead != nil && errRead != io.EOF {
 			_, _ = fmt.Fprintln(os.Stderr, "error reading input file:", errRead)
@@ -192,7 +168,7 @@ func main() {
 		if n == 0 {
 			break
 		}
-		_, err = toWriter.Write(tmp)
+		_, err := (*toWriter).Write(tmp)
 		if err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, "error writing output file:", err)
 			os.Exit(1)
@@ -200,5 +176,19 @@ func main() {
 		if opts.Limit > 0 && total-opts.Limit > 0 {
 			break
 		}
+	}
+}
+
+func SeekFileFrom(fromReader *io.ReadSeekCloser, position int64) {
+	if position > 0 {
+		_, err := (*fromReader).Seek(position, io.SeekStart)
+
+		if err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, "can not seek to offset:", err)
+			os.Exit(1)
+		}
+	} else if position < 0 {
+		_, _ = fmt.Fprintln(os.Stderr, "Offset must be non-negative")
+		os.Exit(1)
 	}
 }
