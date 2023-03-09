@@ -49,21 +49,10 @@ func ParseFlags() (*Options, error) {
 	return &opts, nil
 }
 
-type Reader interface {
-	io.Reader
-	io.Closer
-	io.Seeker
-}
-
-type Writer interface {
-	io.Writer
-	io.Closer
-}
-
 type StdinReader struct{}
 
 func (r *StdinReader) Seek(offset int64, whence int) (n int64, err error) {
-	return os.Stdin.Seek(offset, whence)
+	return io.CopyN(io.Discard, os.Stdin, offset)
 }
 
 func (r *StdinReader) Read(p []byte) (n int, err error) {
@@ -101,7 +90,7 @@ func main() {
 	}
 
 	var sizeFile int64
-	var fromReader Reader
+	var fromReader io.ReadSeekCloser
 
 	if opts.From == "" {
 		fromReader = &StdinReader{}
@@ -123,7 +112,7 @@ func main() {
 			os.Exit(1)
 		}
 		sizeFile = fileInfo.Size()
-		defer func(fromReader Reader) {
+		defer func(fromReader io.ReadSeekCloser) {
 			err := fromReader.Close()
 			if err != nil {
 				_, _ = fmt.Fprintln(os.Stderr, "can not close file:", opts.From, err)
@@ -132,7 +121,7 @@ func main() {
 		}(fromReader)
 	}
 
-	var toWriter Writer
+	var toWriter io.WriteCloser
 	if opts.To == "" {
 		toWriter = &StdoutWriter{}
 	} else {
@@ -144,7 +133,7 @@ func main() {
 				os.Exit(1)
 			}
 		}
-		defer func(toWriter Writer) {
+		defer func(toWriter io.WriteCloser) {
 			err := toWriter.Close()
 			if err != nil {
 				_, _ = fmt.Fprintln(os.Stderr, "can not close file: ", opts.To, err)
@@ -154,11 +143,7 @@ func main() {
 	}
 
 	if opts.Offset > 0 {
-		if opts.From == "" {
-			_, err = io.CopyN(io.Discard, os.Stdin, opts.Offset)
-		} else {
-			_, err = fromReader.Seek(opts.Offset, io.SeekStart)
-		}
+		_, err = fromReader.Seek(opts.Offset, io.SeekStart)
 
 		if err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, "can not seek to offset:", err)
