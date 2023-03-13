@@ -91,16 +91,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	var fromReader io.ReadSeekCloser = nil
-	var toWriter io.WriteCloser = nil
-
-	fromReader, err = OpenFileFrom(opts, fromReader)
+	fromReader, err := OpenFileFrom(opts)
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	toWriter, err = OpenFileTo(opts, toWriter)
+	toWriter, err := OpenFileTo(opts)
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -226,8 +223,10 @@ func SeekFileFrom(fromReader io.ReadSeekCloser, position int64) (int64, error) {
 	return n, nil
 }
 
-func OpenFileFrom(opts *Options, fromReader io.ReadSeekCloser) (io.ReadSeekCloser, error) {
+func OpenFileFrom(opts *Options) (io.ReadSeekCloser, error) {
+	var fromReader io.ReadSeekCloser
 	var err error
+
 	if opts.From == "" {
 		fromReader = &StdinReader{}
 	} else {
@@ -240,7 +239,8 @@ func OpenFileFrom(opts *Options, fromReader io.ReadSeekCloser) (io.ReadSeekClose
 	return fromReader, nil
 }
 
-func OpenFileTo(opts *Options, toWriter io.WriteCloser) (io.WriteCloser, error) {
+func OpenFileTo(opts *Options) (io.WriteCloser, error) {
+	var toWriter io.WriteCloser
 	var err error
 
 	if opts.To == "" {
