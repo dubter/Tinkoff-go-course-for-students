@@ -4,8 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strings"
+	"unicode/utf8"
 )
 
 type Options struct {
@@ -136,28 +138,28 @@ func main() {
 
 func TransferInfo(opts *Options, fromReader *io.ReadSeekCloser, toWriter *io.WriteCloser) {
 	buf := make([]byte, opts.BlockSize)
-	var tmp []byte
+	var totalRead []byte
+	var n int
+	var errRead error
 	total := int64(0)
-	for {
-		total += int64(opts.BlockSize)
-		if opts.Limit > 0 && total-opts.Limit > 0 {
-			buf = make([]byte, int64(opts.BlockSize)-(total-opts.Limit))
-		}
-		n, errRead := (*fromReader).Read(buf)
-		tmp = buf[:n]
-		if errRead != nil && errRead != io.EOF {
-			_, _ = fmt.Fprintln(os.Stderr, "error reading input file:", errRead)
+	if opts.BlockSize == 1 {
+		totalRead, err := ioutil.ReadAll(*fromReader)
+		if err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, "error reading input file:", err)
 			os.Exit(1)
 		}
+
 		if opts.Conv != nil {
 			for _, conv := range opts.Conv {
 				switch conv {
 				case "upper_case":
-					tmp = []byte(strings.ToUpper(string(tmp)))
+					totalRead = []byte(strings.ToUpper(string(totalRead)))
 				case "lower_case":
-					tmp = []byte(strings.ToLower(string(tmp)))
+					totalRead = []byte(strings.ToLower(string(totalRead)))
 				case "trim_spaces":
-					tmp = []byte(strings.TrimSpace(string(tmp)))
+					if len(string(totalRead)) > 1 {
+						totalRead = []byte(strings.TrimSpace(string(totalRead)))
+					}
 				default:
 					_, _ = fmt.Fprintln(os.Stderr, "invalid conversion option:", conv)
 					os.Exit(1)
@@ -165,16 +167,65 @@ func TransferInfo(opts *Options, fromReader *io.ReadSeekCloser, toWriter *io.Wri
 			}
 		}
 
-		if n == 0 {
-			break
-		}
-		_, err := (*toWriter).Write(tmp)
+		_, err = (*toWriter).Write(totalRead)
 		if err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, "error writing output file:", err)
 			os.Exit(1)
 		}
-		if opts.Limit > 0 && total-opts.Limit > 0 {
-			break
+	} else {
+		for {
+			totalRead = nil
+			for {
+				total += int64(opts.BlockSize)
+				if opts.Limit > 0 && total-opts.Limit > 0 {
+					buf = make([]byte, int64(opts.BlockSize)-(total-opts.Limit))
+				}
+				n, errRead = (*fromReader).Read(buf)
+				totalRead = append(totalRead, buf[:n]...)
+
+				if errRead != nil && errRead != io.EOF {
+					_, _ = fmt.Fprintln(os.Stderr, "error reading input file:", errRead)
+					os.Exit(1)
+				}
+
+				if opts.Limit > 0 && total-opts.Limit > 0 {
+					break
+				}
+				if n == 0 {
+					break
+				}
+				if utf8.Valid(totalRead) {
+					break
+				}
+			}
+
+			if opts.Conv != nil {
+				for _, conv := range opts.Conv {
+					switch conv {
+					case "upper_case":
+						totalRead = []byte(strings.ToUpper(string(totalRead)))
+					case "lower_case":
+						totalRead = []byte(strings.ToLower(string(totalRead)))
+					case "trim_spaces":
+						totalRead = []byte(strings.TrimSpace(string(totalRead)))
+					default:
+						_, _ = fmt.Fprintln(os.Stderr, "invalid conversion option:", conv)
+						os.Exit(1)
+					}
+				}
+			}
+
+			if n == 0 {
+				break
+			}
+			_, err := (*toWriter).Write(totalRead)
+			if err != nil {
+				_, _ = fmt.Fprintln(os.Stderr, "error writing output file:", err)
+				os.Exit(1)
+			}
+			if opts.Limit > 0 && total-opts.Limit > 0 {
+				break
+			}
 		}
 	}
 }
