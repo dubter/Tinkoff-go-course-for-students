@@ -91,8 +91,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	var fromReader io.ReadSeekCloser
-	var toWriter io.WriteCloser
+	var fromReader io.ReadSeekCloser = nil
+	var toWriter io.WriteCloser = nil
 
 	fromReader, err = OpenFileFrom(opts, fromReader)
 	if err != nil {
