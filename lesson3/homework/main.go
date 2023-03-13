@@ -1,10 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 	"unicode/utf8"
@@ -53,7 +53,7 @@ func ParseFlags() (*Options, error) {
 
 type StdinReader struct{}
 
-func (r *StdinReader) Seek(offset int64, whence int) (n int64, err error) {
+func (r *StdinReader) Seek(offset int64, _ int) (n int64, err error) {
 	return io.CopyN(io.Discard, os.Stdin, offset)
 }
 
@@ -94,60 +94,44 @@ func main() {
 	var fromReader io.ReadSeekCloser
 	var toWriter io.WriteCloser
 
-	if opts.From == "" {
-		fromReader = &StdinReader{}
-	} else {
-		fromReader, err = os.Open(opts.From)
-		if err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "can not open input file:", err)
-			os.Exit(1)
-		}
-
-		defer func(fromReader io.ReadSeekCloser) {
-			err := fromReader.Close()
-			if err != nil {
-				_, _ = fmt.Fprintln(os.Stderr, "can not close file:", opts.From, err)
-				os.Exit(1)
-			}
-		}(fromReader)
+	fromReader, err = OpenFileFrom(opts, fromReader)
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 
-	if opts.To == "" {
-		toWriter = &StdoutWriter{}
-	} else {
-		toWriter, err = os.Open(opts.To)
-		if err != nil {
-			toWriter, err = os.Create(opts.To)
-			if err != nil {
-				_, _ = fmt.Fprintln(os.Stderr, "can not create output file: ", err)
-				os.Exit(1)
-			}
-		}
-		defer func(toWriter io.WriteCloser) {
-			err := toWriter.Close()
-			if err != nil {
-				_, _ = fmt.Fprintln(os.Stderr, "can not close file: ", opts.To, err)
-				os.Exit(1)
-			}
-		}(toWriter)
+	toWriter, err = OpenFileTo(opts, toWriter)
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 
-	SeekFileFrom(&fromReader, opts.Offset)
-	TransferInfo(opts, &fromReader, &toWriter)
+	_, err = SeekFileFrom(fromReader, opts.Offset)
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	_, err = TransferInfo(opts, fromReader, toWriter)
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }
 
-func TransferInfo(opts *Options, fromReader *io.ReadSeekCloser, toWriter *io.WriteCloser) {
+func TransferInfo(opts *Options, fromReader io.ReadSeekCloser, toWriter io.WriteCloser) (int64, error) {
 	buf := make([]byte, opts.BlockSize)
 	var totalRead []byte
 	var n int
 	var errRead error
 	total := int64(0)
 	if opts.BlockSize == 1 {
-		totalRead, err := ioutil.ReadAll(*fromReader)
+		var buf bytes.Buffer
+		_, err := io.Copy(&buf, fromReader)
 		if err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "error reading input file:", err)
-			os.Exit(1)
+			return 0, fmt.Errorf("error reading input file: %v", err)
 		}
+		totalRead = buf.Bytes()
 
 		if opts.Conv != nil {
 			for _, conv := range opts.Conv {
@@ -161,16 +145,14 @@ func TransferInfo(opts *Options, fromReader *io.ReadSeekCloser, toWriter *io.Wri
 						totalRead = []byte(strings.TrimSpace(string(totalRead)))
 					}
 				default:
-					_, _ = fmt.Fprintln(os.Stderr, "invalid conversion option:", conv)
-					os.Exit(1)
+					return 0, fmt.Errorf("invalid conversion option: %v", conv)
 				}
 			}
 		}
 
-		_, err = (*toWriter).Write(totalRead)
+		_, err = toWriter.Write(totalRead)
 		if err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "error writing output file:", err)
-			os.Exit(1)
+			return 0, fmt.Errorf("error writing output file: %v", err)
 		}
 	} else {
 		for {
@@ -180,12 +162,11 @@ func TransferInfo(opts *Options, fromReader *io.ReadSeekCloser, toWriter *io.Wri
 				if opts.Limit > 0 && total-opts.Limit > 0 {
 					buf = make([]byte, int64(opts.BlockSize)-(total-opts.Limit))
 				}
-				n, errRead = (*fromReader).Read(buf)
+				n, errRead = fromReader.Read(buf)
 				totalRead = append(totalRead, buf[:n]...)
 
 				if errRead != nil && errRead != io.EOF {
-					_, _ = fmt.Fprintln(os.Stderr, "error reading input file:", errRead)
-					os.Exit(1)
+					return 0, fmt.Errorf("error reading input file: %v", errRead)
 				}
 
 				if opts.Limit > 0 && total-opts.Limit > 0 {
@@ -209,37 +190,69 @@ func TransferInfo(opts *Options, fromReader *io.ReadSeekCloser, toWriter *io.Wri
 					case "trim_spaces":
 						totalRead = []byte(strings.TrimSpace(string(totalRead)))
 					default:
-						_, _ = fmt.Fprintln(os.Stderr, "invalid conversion option:", conv)
-						os.Exit(1)
+						return 0, fmt.Errorf("invalid conversion option: %v", conv)
 					}
 				}
 			}
 
+			_, err := toWriter.Write(totalRead)
 			if n == 0 {
 				break
 			}
-			_, err := (*toWriter).Write(totalRead)
 			if err != nil {
-				_, _ = fmt.Fprintln(os.Stderr, "error writing output file:", err)
-				os.Exit(1)
+				return 0, fmt.Errorf("error writing output file: %v", err)
 			}
 			if opts.Limit > 0 && total-opts.Limit > 0 {
 				break
 			}
 		}
 	}
+	return total, nil
 }
 
-func SeekFileFrom(fromReader *io.ReadSeekCloser, position int64) {
+func SeekFileFrom(fromReader io.ReadSeekCloser, position int64) (int64, error) {
+	var n int64
+	var err error
+
 	if position > 0 {
-		_, err := (*fromReader).Seek(position, io.SeekStart)
+		n, err = fromReader.Seek(position, io.SeekStart)
 
 		if err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "can not seek to offset:", err)
-			os.Exit(1)
+			return n, fmt.Errorf("can not seek to offset: %v", err)
 		}
 	} else if position < 0 {
-		_, _ = fmt.Fprintln(os.Stderr, "Offset must be non-negative")
-		os.Exit(1)
+		return n, fmt.Errorf("offset must be non-negative")
 	}
+	return n, nil
+}
+
+func OpenFileFrom(opts *Options, fromReader io.ReadSeekCloser) (io.ReadSeekCloser, error) {
+	var err error
+	if opts.From == "" {
+		fromReader = &StdinReader{}
+	} else {
+		fromReader, err = os.Open(opts.From)
+
+		if err != nil {
+			return fromReader, fmt.Errorf("can not open input file: %v", err)
+		}
+	}
+	return fromReader, nil
+}
+
+func OpenFileTo(opts *Options, toWriter io.WriteCloser) (io.WriteCloser, error) {
+	var err error
+
+	if opts.To == "" {
+		toWriter = &StdoutWriter{}
+	} else {
+		toWriter, err = os.Open(opts.To)
+		if err != nil {
+			toWriter, err = os.Create(opts.To)
+			if err != nil {
+				return toWriter, fmt.Errorf("can not create output file: %v", err)
+			}
+		}
+	}
+	return toWriter, nil
 }
