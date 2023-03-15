@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"golang.org/x/sync/semaphore"
 	"sync"
 )
 
@@ -22,89 +23,60 @@ type DirSizer interface {
 // sizer implement the DirSizer interface
 type sizer struct {
 	// maxWorkersCount number of workers for asynchronous run
-	maxWorkersCount int
+	maxWorkersCount int64
 	wg              sync.WaitGroup
 	commonSize      int64
 	commonCount     int64
 	err             error
+	semaphore       semaphore.Weighted
 }
 
 // NewSizer returns new DirSizer instance
 func NewSizer() DirSizer {
 	sizerCustom := sizer{}
-	sizerCustom.maxWorkersCount = 10
+	sizerCustom.maxWorkersCount = 4
+	sizerCustom.semaphore = *semaphore.NewWeighted(sizerCustom.maxWorkersCount)
 	return &sizerCustom
 }
 
 func (a *sizer) Size(ctx context.Context, d Dir) (Result, error) {
-	dirs, files, err := d.Ls(ctx)
-	if err != nil {
-		a.err = err
-	}
-
-	for _, file := range files {
-		sizeFile, errReadStat := file.Stat(ctx)
-		if errReadStat != nil {
-			a.err = errReadStat
-		}
-		a.commonSize += sizeFile
-		a.commonCount++
-	}
-
-	for _, dir := range dirs {
-		if a.maxWorkersCount > 0 {
-			a.maxWorkersCount--
-			a.wg.Add(1)
-			dir := dir
-			go func() {
-				defer a.wg.Done()
-				defer func() {
-					a.maxWorkersCount++
-				}()
-				a.SizeUsingGorutine(ctx, dir)
-			}()
-		} else {
-			_, _ = a.Size(ctx, dir)
-		}
-	}
-
+	a.Workers(ctx, d)
 	a.wg.Wait()
-
 	if a.err != nil {
 		return Result{0, 0}, a.err
 	}
 	return Result{a.commonSize, a.commonCount}, nil
 }
 
-func (a *sizer) SizeUsingGorutine(ctx context.Context, d Dir) {
+func (a *sizer) Workers(ctx context.Context, d Dir) {
 	dirs, files, err := d.Ls(ctx)
 	if err != nil {
 		a.err = err
+		return
 	}
 
 	for _, file := range files {
 		sizeFile, errReadStat := file.Stat(ctx)
 		if errReadStat != nil {
 			a.err = errReadStat
+			return
 		}
 		a.commonSize += sizeFile
 		a.commonCount++
 	}
 
 	for _, dir := range dirs {
-		if a.maxWorkersCount > 0 {
-			a.maxWorkersCount--
-			a.wg.Add(1)
-			dir := dir
-			go func() {
-				defer a.wg.Done()
-				defer func() {
-					a.maxWorkersCount++
-				}()
-				a.SizeUsingGorutine(ctx, dir)
-			}()
-		} else {
-			_, _ = a.Size(ctx, dir)
+		errAcquire := a.semaphore.Acquire(ctx, 1)
+		if errAcquire != nil {
+			a.err = errAcquire
+			return
 		}
+		a.wg.Add(1)
+		dir := dir
+		go func() {
+			defer a.wg.Done()
+			defer a.semaphore.Release(1)
+			a.Workers(ctx, dir)
+		}()
 	}
 }
