@@ -21,7 +21,7 @@ func ExecutePipeline(ctx context.Context, in In, stages ...Stage) Out {
 					return
 				case v, open := <-in:
 					if !open {
-						break
+						return
 					}
 					tmp <- v
 				}
