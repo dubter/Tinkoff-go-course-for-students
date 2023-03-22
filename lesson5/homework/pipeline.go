@@ -15,11 +15,14 @@ func ExecutePipeline(ctx context.Context, in In, stages ...Stage) Out {
 		tmp := make(chan any)
 		go func(in In, out chan any) {
 			defer close(out)
-			for v := range in {
+			for {
 				select {
 				case <-ctx.Done():
 					return
-				default:
+				case v, open := <-in:
+					if !open {
+						break
+					}
 					tmp <- v
 				}
 			}
