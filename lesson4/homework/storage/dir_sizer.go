@@ -4,6 +4,7 @@ import (
 	"context"
 	"golang.org/x/sync/semaphore"
 	"sync"
+	"sync/atomic"
 )
 
 // Result represents the Size function result
@@ -23,10 +24,10 @@ type DirSizer interface {
 // sizer implement the DirSizer interface
 type sizer struct {
 	// maxWorkersCount number of workers for asynchronous run
-	maxWorkersCount int64
+	maxWorkersCount atomic.Int64
 	wg              sync.WaitGroup
-	commonSize      int64
-	commonCount     int64
+	commonSize      atomic.Int64
+	commonCount     atomic.Int64
 	err             error
 	semaphore       semaphore.Weighted
 }
@@ -34,8 +35,8 @@ type sizer struct {
 // NewSizer returns new DirSizer instance
 func NewSizer() DirSizer {
 	sizerCustom := sizer{}
-	sizerCustom.maxWorkersCount = 4
-	sizerCustom.semaphore = *semaphore.NewWeighted(sizerCustom.maxWorkersCount)
+	sizerCustom.maxWorkersCount.Store(4)
+	sizerCustom.semaphore = *semaphore.NewWeighted(sizerCustom.maxWorkersCount.Load())
 	return &sizerCustom
 }
 
@@ -45,7 +46,7 @@ func (a *sizer) Size(ctx context.Context, d Dir) (Result, error) {
 	if a.err != nil {
 		return Result{0, 0}, a.err
 	}
-	return Result{a.commonSize, a.commonCount}, nil
+	return Result{a.commonSize.Load(), a.commonCount.Load()}, nil
 }
 
 func (a *sizer) Workers(ctx context.Context, d Dir) {
@@ -61,8 +62,8 @@ func (a *sizer) Workers(ctx context.Context, d Dir) {
 			a.err = errReadStat
 			return
 		}
-		a.commonSize += sizeFile
-		a.commonCount++
+		a.commonSize.Add(sizeFile)
+		a.commonCount.Add(1)
 	}
 
 	for _, dir := range dirs {
