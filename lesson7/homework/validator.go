@@ -22,7 +22,7 @@ type ValidationErrors []ValidationError
 func (v ValidationErrors) Error() string {
 	var b strings.Builder
 	if len(v) == 1 {
-		b.WriteString(v[0].Field + ": " + v[0].Error + "\n")
+		b.WriteString(v[0].Error)
 	} else {
 		for _, e := range v {
 			b.WriteString(e.Field + ": " + e.Error + "\n")
