@@ -217,6 +217,83 @@ func TestValidate(t *testing.T) {
 				return true
 			},
 		},
+		{
+			name: "valid struct with two validators for one field",
+			args: args{
+				v: struct {
+					MaxA int `validate:"max:12;min:10"`
+				}{
+					MaxA: 11,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid struct with two validators for many fields",
+			args: args{
+				v: struct {
+					Len       string `validate:"len:20;max:20"`
+					LenZ      string `validate:"len:0;min:-1"`
+					InInt     int    `validate:"in:20,25,30;min:20"`
+					InNeg     int    `validate:"in:-20,-25,-30;max:-20"`
+					InStr     string `validate:"in:foo,bar;len:3"`
+					MinInt    int    `validate:"min:10;max:15"`
+					MinIntNeg int    `validate:"min:-10;max:-5"`
+					MinStr    string `validate:"min:10;max:15"`
+					MinStrNeg string `validate:"min:-1;len:3;max:5"`
+					MaxInt    int    `validate:"max:20;min:15"`
+					MaxIntNeg int    `validate:"max:-2;min:-3"`
+					MaxStr    string `validate:"max:20;min:10"`
+				}{
+					Len:       "abcdefghjklmopqrstvu",
+					LenZ:      "",
+					InInt:     25,
+					InNeg:     -25,
+					InStr:     "bar",
+					MinInt:    15,
+					MinIntNeg: -9,
+					MinStr:    "abcdefghjkl",
+					MinStrNeg: "abc",
+					MaxInt:    16,
+					MaxIntNeg: -3,
+					MaxStr:    "abcdefghjklmopqrst"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid struct with two validators for many fields",
+			args: args{
+				v: struct {
+					MaxA  int    `validate:"max:10,min:12"`
+					Len   string `validate:"len:5,min:6"`
+					LenIn string `validate:"len:5,in:a,b,c,d,e"`
+				}{
+					MaxA:  11,
+					Len:   "abcde",
+					LenIn: "abcde",
+				},
+			},
+			wantErr: true,
+			checkErr: func(err error) bool {
+				assert.Len(t, err.(ValidationErrors), 3)
+				return true
+			},
+		},
+		{
+			name: "wrong syntax with two validators",
+			args: args{
+				v: struct {
+					MaxA int `validate:"max:12,min:10"`
+				}{
+					MaxA: 11,
+				},
+			},
+			wantErr: true,
+			checkErr: func(err error) bool {
+				e := &ValidationErrors{}
+				return errors.As(err, e) && e.Error() == ErrInvalidValidatorSyntax.Error()
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
