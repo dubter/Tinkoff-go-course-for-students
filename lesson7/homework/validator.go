@@ -56,111 +56,115 @@ func Validate(v interface{}) error {
 			continue
 		}
 
-		parts := strings.SplitN(tag, ":", 2)
-		if len(parts) != 2 {
-			validationErrors = append(validationErrors, ValidationError{
-				Field: field.Name,
-				Error: ErrInvalidValidatorSyntax.Error(),
-			})
-			continue
-		}
+		validators := strings.Split(tag, ";")
 
-		switch parts[0] {
-		case "len":
-			expectedLen, err := strconv.Atoi(parts[1])
-			if err != nil {
+		for _, validator := range validators {
+			parts := strings.SplitN(validator, ":", 2)
+			if len(parts) != 2 {
 				validationErrors = append(validationErrors, ValidationError{
 					Field: field.Name,
 					Error: ErrInvalidValidatorSyntax.Error(),
 				})
 				continue
 			}
-			if fieldValue.Kind() == reflect.String && len(fieldValue.String()) != expectedLen {
-				validationErrors = append(validationErrors, ValidationError{
-					Field: field.Name,
-					Error: fmt.Sprintf("should have length %d", expectedLen),
-				})
-			}
-		case "in":
-			values := strings.Split(parts[1], ",")
-			found := false
-			empty := false
 
-			for _, value := range values {
-				if value == "" {
-					empty = true
+			switch parts[0] {
+			case "len":
+				expectedLen, err := strconv.Atoi(parts[1])
+				if err != nil {
+					validationErrors = append(validationErrors, ValidationError{
+						Field: field.Name,
+						Error: ErrInvalidValidatorSyntax.Error(),
+					})
+					continue
 				}
-			}
-			if empty {
-				validationErrors = append(validationErrors, ValidationError{
-					Field: field.Name,
-					Error: ErrInvalidValidatorSyntax.Error(),
-				})
-				continue
-			}
-
-			for _, value := range values {
-				if fieldValue.Kind() == reflect.String && fieldValue.String() == value {
-					found = true
-					break
-				} else if fieldValue.Kind() == reflect.Int && strconv.Itoa(int(fieldValue.Int())) == value {
-					found = true
-					break
-				} else if value == "" {
-					empty = true
+				if fieldValue.Kind() == reflect.String && len(fieldValue.String()) != expectedLen {
+					validationErrors = append(validationErrors, ValidationError{
+						Field: field.Name,
+						Error: fmt.Sprintf("should have length %d", expectedLen),
+					})
 				}
-			}
-			if !found {
-				validationErrors = append(validationErrors, ValidationError{
-					Field: field.Name,
-					Error: fmt.Sprintf("should be one of %s", parts[1]),
-				})
-			}
-		case "min":
-			expectedMin, err := strconv.Atoi(parts[1])
-			if err != nil {
+			case "in":
+				values := strings.Split(parts[1], ",")
+				found := false
+				empty := false
+
+				for _, value := range values {
+					if value == "" {
+						empty = true
+					}
+				}
+				if empty {
+					validationErrors = append(validationErrors, ValidationError{
+						Field: field.Name,
+						Error: ErrInvalidValidatorSyntax.Error(),
+					})
+					continue
+				}
+
+				for _, value := range values {
+					if fieldValue.Kind() == reflect.String && fieldValue.String() == value {
+						found = true
+						break
+					} else if fieldValue.Kind() == reflect.Int && strconv.Itoa(int(fieldValue.Int())) == value {
+						found = true
+						break
+					} else if value == "" {
+						empty = true
+					}
+				}
+				if !found {
+					validationErrors = append(validationErrors, ValidationError{
+						Field: field.Name,
+						Error: fmt.Sprintf("should be one of %s", parts[1]),
+					})
+				}
+			case "min":
+				expectedMin, err := strconv.Atoi(parts[1])
+				if err != nil {
+					validationErrors = append(validationErrors, ValidationError{
+						Field: field.Name,
+						Error: ErrInvalidValidatorSyntax.Error(),
+					})
+					continue
+				}
+				if fieldValue.Kind() == reflect.String && len(fieldValue.String()) < expectedMin {
+					validationErrors = append(validationErrors, ValidationError{
+						Field: field.Name,
+						Error: fmt.Sprintf("should have length at least %d", expectedMin),
+					})
+				} else if fieldValue.Kind() == reflect.Int && int(fieldValue.Int()) < expectedMin {
+					validationErrors = append(validationErrors, ValidationError{
+						Field: field.Name,
+						Error: fmt.Sprintf("should be at least %d", expectedMin),
+					})
+				}
+			case "max":
+				expectedMax, err := strconv.Atoi(parts[1])
+				if err != nil {
+					validationErrors = append(validationErrors, ValidationError{
+						Field: field.Name,
+						Error: ErrInvalidValidatorSyntax.Error(),
+					})
+					continue
+				}
+				if fieldValue.Kind() == reflect.String && len(fieldValue.String()) > expectedMax {
+					validationErrors = append(validationErrors, ValidationError{
+						Field: field.Name,
+						Error: fmt.Sprintf("should have length at most %d", expectedMax),
+					})
+				} else if fieldValue.Kind() == reflect.Int && int(fieldValue.Int()) > expectedMax {
+					validationErrors = append(validationErrors, ValidationError{
+						Field: field.Name,
+						Error: fmt.Sprintf("should be at most %d", expectedMax),
+					})
+				}
+			default:
 				validationErrors = append(validationErrors, ValidationError{
 					Field: field.Name,
 					Error: ErrInvalidValidatorSyntax.Error(),
 				})
-				continue
 			}
-			if fieldValue.Kind() == reflect.String && len(fieldValue.String()) < expectedMin {
-				validationErrors = append(validationErrors, ValidationError{
-					Field: field.Name,
-					Error: fmt.Sprintf("should have length at least %d", expectedMin),
-				})
-			} else if fieldValue.Kind() == reflect.Int && int(fieldValue.Int()) < expectedMin {
-				validationErrors = append(validationErrors, ValidationError{
-					Field: field.Name,
-					Error: fmt.Sprintf("should be at least %d", expectedMin),
-				})
-			}
-		case "max":
-			expectedMax, err := strconv.Atoi(parts[1])
-			if err != nil {
-				validationErrors = append(validationErrors, ValidationError{
-					Field: field.Name,
-					Error: ErrInvalidValidatorSyntax.Error(),
-				})
-				continue
-			}
-			if fieldValue.Kind() == reflect.String && len(fieldValue.String()) > expectedMax {
-				validationErrors = append(validationErrors, ValidationError{
-					Field: field.Name,
-					Error: fmt.Sprintf("should have length at most %d", expectedMax),
-				})
-			} else if fieldValue.Kind() == reflect.Int && int(fieldValue.Int()) > expectedMax {
-				validationErrors = append(validationErrors, ValidationError{
-					Field: field.Name,
-					Error: fmt.Sprintf("should be at most %d", expectedMax),
-				})
-			}
-		default:
-			validationErrors = append(validationErrors, ValidationError{
-				Field: field.Name,
-				Error: ErrInvalidValidatorSyntax.Error(),
-			})
 		}
 	}
 
