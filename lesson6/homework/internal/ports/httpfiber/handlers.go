@@ -1,10 +1,11 @@
 package httpfiber
 
 import (
+	"fmt"
+	"github.com/dubter/Validator"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
-
 	"homework6/internal/app"
 )
 
@@ -18,14 +19,22 @@ func createAd(a app.App) fiber.Handler {
 			return c.JSON(AdErrorResponse(err))
 		}
 
-		//TODO: вызов логики, например, CreateAd(c.Context(), reqBody.Title, reqBody.Text, reqBody.UserID)
-		// TODO: метод должен возвращать AdSuccessResponse или ошибку.
+		ad, errValid := a.CreateAd(reqBody.Title, reqBody.Text, reqBody.UserID)
+		if errValid == fmt.Errorf("error validation") {
+			c.Status(http.StatusBadRequest)
+			return c.JSON(AdErrorResponse(errValid))
+		}
+
+		if Validator.Validate(*ad) != nil {
+			c.Status(http.StatusBadRequest)
+			return c.JSON(AdErrorResponse(Validator.Validate(*ad)))
+		}
 
 		if err != nil {
 			c.Status(http.StatusInternalServerError)
 			return c.JSON(AdErrorResponse(err))
 		}
-		return c.JSON(AdSuccessResponse( /* объект ad */ ))
+		return c.JSON(AdSuccessResponse(ad))
 	}
 }
 
@@ -44,15 +53,23 @@ func changeAdStatus(a app.App) fiber.Handler {
 			return c.JSON(AdErrorResponse(err))
 		}
 
-		// TODO: вызов логики ChangeAdStatus(c.Context(), int64(adID), reqBody.UserID, reqBody.Published)
-		// TODO: метод должен возвращать AdSuccessResponse или ошибку.
+		ad, errorId := a.ChangeAdStatus(int64(adID), reqBody.UserID, reqBody.Published)
+		if errorId != nil {
+			c.Status(http.StatusForbidden)
+			return c.JSON(AdErrorResponse(errorId))
+		}
+
+		if Validator.Validate(*ad) != nil {
+			c.Status(http.StatusBadRequest)
+			return c.JSON(AdErrorResponse(Validator.Validate(*ad)))
+		}
 
 		if err != nil {
 			c.Status(http.StatusInternalServerError)
 			return c.JSON(AdErrorResponse(err))
 		}
 
-		return c.JSON(AdSuccessResponse( /* объект ad */ ))
+		return c.JSON(AdSuccessResponse(ad))
 	}
 }
 
@@ -71,14 +88,22 @@ func updateAd(a app.App) fiber.Handler {
 			return c.JSON(AdErrorResponse(err))
 		}
 
-		// TODO: вызов логики, например, UpdateAd(c.Context(), int64(adID), reqBody.UserID, reqBody.Title, reqBody.Text)
-		// TODO: метод должен возвращать AdSuccessResponse или ошибку.
+		ad, errorId := a.UpdateAd(int64(adID), reqBody.UserID, reqBody.Title, reqBody.Text)
+		if errorId != nil {
+			c.Status(http.StatusForbidden)
+			return c.JSON(AdErrorResponse(errorId))
+		}
+
+		if Validator.Validate(*ad) != nil {
+			c.Status(http.StatusBadRequest)
+			return c.JSON(AdErrorResponse(Validator.Validate(*ad)))
+		}
 
 		if err != nil {
 			c.Status(http.StatusInternalServerError)
 			return c.JSON(AdErrorResponse(err))
 		}
 
-		return c.JSON(AdSuccessResponse( /* объект ad */ ))
+		return c.JSON(AdSuccessResponse(ad))
 	}
 }
