@@ -1,8 +1,8 @@
 package httpfiber
 
 import (
+	"errors"
 	"fmt"
-	"github.com/dubter/Validator"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
@@ -19,15 +19,11 @@ func createAd(a app.App) fiber.Handler {
 			return c.JSON(AdErrorResponse(err))
 		}
 
-		ad, errValid := a.CreateAd(reqBody.Title, reqBody.Text, reqBody.UserID)
-		if errValid == fmt.Errorf("error validation") {
-			c.Status(http.StatusBadRequest)
-			return c.JSON(AdErrorResponse(errValid))
-		}
+		ad, ok := a.CreateAd(reqBody.Title, reqBody.Text, reqBody.UserID)
 
-		if Validator.Validate(*ad) != nil {
+		if errors.Is(ok, fmt.Errorf("validation error")) {
 			c.Status(http.StatusBadRequest)
-			return c.JSON(AdErrorResponse(Validator.Validate(*ad)))
+			return c.JSON(AdErrorResponse(ok))
 		}
 
 		if err != nil {
@@ -53,15 +49,15 @@ func changeAdStatus(a app.App) fiber.Handler {
 			return c.JSON(AdErrorResponse(err))
 		}
 
-		ad, errorId := a.ChangeAdStatus(int64(adID), reqBody.UserID, reqBody.Published)
-		if errorId != nil {
+		ad, ok := a.ChangeAdStatus(int64(adID), reqBody.UserID, reqBody.Published)
+		if errors.Is(ok, fmt.Errorf("incorrect userId")) {
 			c.Status(http.StatusForbidden)
-			return c.JSON(AdErrorResponse(errorId))
+			return c.JSON(AdErrorResponse(ok))
 		}
 
-		if Validator.Validate(*ad) != nil {
+		if errors.Is(ok, fmt.Errorf("validation error")) {
 			c.Status(http.StatusBadRequest)
-			return c.JSON(AdErrorResponse(Validator.Validate(*ad)))
+			return c.JSON(AdErrorResponse(ok))
 		}
 
 		if err != nil {
@@ -88,15 +84,15 @@ func updateAd(a app.App) fiber.Handler {
 			return c.JSON(AdErrorResponse(err))
 		}
 
-		ad, errorId := a.UpdateAd(int64(adID), reqBody.UserID, reqBody.Title, reqBody.Text)
-		if errorId != nil {
+		ad, ok := a.UpdateAd(int64(adID), reqBody.UserID, reqBody.Title, reqBody.Text)
+		if errors.Is(ok, fmt.Errorf("incorrect userId")) {
 			c.Status(http.StatusForbidden)
-			return c.JSON(AdErrorResponse(errorId))
+			return c.JSON(AdErrorResponse(ok))
 		}
 
-		if Validator.Validate(*ad) != nil {
+		if errors.Is(ok, fmt.Errorf("validation error")) {
 			c.Status(http.StatusBadRequest)
-			return c.JSON(AdErrorResponse(Validator.Validate(*ad)))
+			return c.JSON(AdErrorResponse(ok))
 		}
 
 		if err != nil {
