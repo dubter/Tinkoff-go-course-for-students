@@ -2,7 +2,6 @@ package httpfiber
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
@@ -21,7 +20,7 @@ func createAd(a app.App) fiber.Handler {
 
 		ad, ok := a.CreateAd(reqBody.Title, reqBody.Text, reqBody.UserID)
 
-		if errors.Is(ok, fmt.Errorf("validation error")) {
+		if errors.Is(ok, app.ValidateError) {
 			c.Status(http.StatusBadRequest)
 			return c.JSON(AdErrorResponse(ok))
 		}
@@ -50,12 +49,12 @@ func changeAdStatus(a app.App) fiber.Handler {
 		}
 
 		ad, ok := a.ChangeAdStatus(int64(adID), reqBody.UserID, reqBody.Published)
-		if errors.Is(ok, fmt.Errorf("incorrect userId")) {
+		if errors.Is(ok, app.IncorrectUserId) {
 			c.Status(http.StatusForbidden)
 			return c.JSON(AdErrorResponse(ok))
 		}
 
-		if errors.Is(ok, fmt.Errorf("validation error")) {
+		if errors.Is(ok, app.ValidateError) {
 			c.Status(http.StatusBadRequest)
 			return c.JSON(AdErrorResponse(ok))
 		}
@@ -85,12 +84,12 @@ func updateAd(a app.App) fiber.Handler {
 		}
 
 		ad, ok := a.UpdateAd(int64(adID), reqBody.UserID, reqBody.Title, reqBody.Text)
-		if errors.Is(ok, fmt.Errorf("incorrect userId")) {
+		if errors.Is(ok, app.IncorrectUserId) {
 			c.Status(http.StatusForbidden)
 			return c.JSON(AdErrorResponse(ok))
 		}
 
-		if errors.Is(ok, fmt.Errorf("validation error")) {
+		if errors.Is(ok, app.ValidateError) {
 			c.Status(http.StatusBadRequest)
 			return c.JSON(AdErrorResponse(ok))
 		}

@@ -1,10 +1,15 @@
 package app
 
 import (
-	"fmt"
+	"errors"
 	"github.com/dubter/Validator"
 	"homework6/internal/ads"
 )
+
+// some errors
+
+var IncorrectUserId = errors.New("incorrect userId")
+var ValidateError = errors.New("validation error")
 
 type App interface {
 	CreateAd(title string, text string, userId int64) (*ads.Ad, error)
@@ -28,9 +33,9 @@ type appRepo struct {
 }
 
 func (a *appRepo) CreateAd(title string, text string, userId int64) (*ads.Ad, error) {
-	ad := ads.Ad{ID: a.repository.GetPrimaryKey() + 1, Title: title, Text: text, AuthorID: userId}
+	ad := ads.Ad{ID: a.repository.GetPrimaryKey(), Title: title, Text: text, AuthorID: userId}
 	if Validator.Validate(ad) != nil {
-		return &ad, fmt.Errorf("validation error")
+		return nil, ValidateError
 	}
 	a.repository.AddAd(&ad)
 	return &ad, nil
@@ -39,15 +44,15 @@ func (a *appRepo) CreateAd(title string, text string, userId int64) (*ads.Ad, er
 func (a *appRepo) ChangeAdStatus(adId int64, userId int64, published bool) (*ads.Ad, error) {
 	ad, err := a.repository.GetAdById(adId)
 	if err != nil {
-		return &ad, err
+		return nil, err
 	}
 
 	ad.Published = published
 	if userId != ad.AuthorID {
-		return &ad, fmt.Errorf("incorrect userId")
+		return nil, IncorrectUserId
 	}
 	if Validator.Validate(ad) != nil {
-		return nil, fmt.Errorf("validation error")
+		return nil, ValidateError
 	}
 
 	a.repository.Update(&ad)
@@ -57,16 +62,16 @@ func (a *appRepo) ChangeAdStatus(adId int64, userId int64, published bool) (*ads
 func (a *appRepo) UpdateAd(adId int64, userId int64, title string, text string) (*ads.Ad, error) {
 	ad, err := a.repository.GetAdById(adId)
 	if err != nil {
-		return &ad, err
+		return nil, err
 	}
 
 	ad.Text = text
 	ad.Title = title
 	if userId != ad.AuthorID {
-		return &ad, fmt.Errorf("incorrect userId")
+		return nil, IncorrectUserId
 	}
 	if Validator.Validate(ad) != nil {
-		return &ad, fmt.Errorf("validation error")
+		return nil, ValidateError
 	}
 
 	a.repository.Update(&ad)

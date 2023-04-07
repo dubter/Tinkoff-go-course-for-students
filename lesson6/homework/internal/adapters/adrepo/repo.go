@@ -21,6 +21,7 @@ func (repo *repositoryMap) GetAdById(id int64) (ads.Ad, error) {
 
 func (repo *repositoryMap) AddAd(ad *ads.Ad) {
 	repo.dict[ad.ID] = *ad
+	repo.counter++
 }
 
 func New() app.Repository {
