@@ -45,6 +45,7 @@ func TestGetFilteredAdsOnlyUnpublished(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = client.changeAdStatus(0, ad2.Data.ID, true)
+	assert.NoError(t, err)
 
 	filters := map[string]any{
 		"published": false,
