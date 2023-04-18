@@ -1,9 +1,13 @@
 package ads
 
+import "time"
+
 type Ad struct {
-	ID        int64
-	Title     string
-	Text      string
-	AuthorID  int64
-	Published bool
+	ID           int64
+	Title        string `validate:"min:1;max:99"`
+	Text         string `validate:"min:1;max:499"`
+	AuthorID     int64
+	Published    bool
+	DateUpdate   time.Time
+	DateCreating time.Time
 }
