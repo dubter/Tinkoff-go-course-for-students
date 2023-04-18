@@ -15,7 +15,7 @@ func TestCreateAd(t *testing.T) {
 	_, errUser := client.createUser("og buda", "buda@phystech.edu")
 	assert.NoError(t, errUser)
 
-	now := time.Now()
+	now := time.Now().UTC()
 	response, err := client.createAd(0, "hello", "world")
 	assert.NoError(t, err)
 	assert.Zero(t, response.Data.ID)
@@ -74,7 +74,7 @@ func TestListAds(t *testing.T) {
 	_, errUser := client.createUser("og buda", "buda@phystech.edu")
 	assert.NoError(t, errUser)
 
-	now := time.Now()
+	now := time.Now().UTC()
 	response, err := client.createAd(0, "hello", "world")
 	assert.NoError(t, err)
 
@@ -102,7 +102,7 @@ func TestAdById(t *testing.T) {
 	_, errUser := client.createUser("og buda", "buda@phystech.edu")
 	assert.NoError(t, errUser)
 
-	now := time.Now()
+	now := time.Now().UTC()
 	response, err := client.createAd(0, "hello", "world")
 	assert.NoError(t, err)
 
@@ -123,7 +123,7 @@ func TestUpdatedAdById(t *testing.T) {
 	_, errUser := client.createUser("og buda", "buda@phystech.edu")
 	assert.NoError(t, errUser)
 
-	now := time.Now()
+	now := time.Now().UTC()
 	response1, err := client.createAd(0, "hello", "world")
 	assert.NoError(t, err)
 

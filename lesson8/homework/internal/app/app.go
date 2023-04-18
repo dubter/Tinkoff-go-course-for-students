@@ -21,7 +21,7 @@ type App interface {
 
 	GetAd(id int64) (*ads.Ad, error)
 	GetListAds(filters map[string]any) []ads.Ad
-	GetListAdsByTitle(title string) []ads.Ad
+	GetListAdsByTitle(pattern string) []ads.Ad
 
 	CreateUser(nickname string, email string) (*users.User, error)
 	UpdateUser(userId int64, nickname string, email string) (*users.User, error)
@@ -34,7 +34,7 @@ type Repository interface {
 	ChangeAd(ad *ads.Ad) bool
 
 	GetAds(filters map[string]any) []ads.Ad
-	GetAdsByTitle(title string) []ads.Ad
+	GetAdsByTitle(pattern string) []ads.Ad
 
 	GetUserById(id int64) (users.User, error)
 	AddUser(user *users.User)
@@ -54,7 +54,7 @@ func (a *appRepo) CreateAd(title string, text string, userId int64) (*ads.Ad, er
 	if _, err := a.repository.GetUserById(userId); err != nil {
 		return nil, IncorrectUserId
 	}
-	now := time.Now()
+	now := time.Now().UTC()
 	ad := ads.Ad{ID: a.repository.GetAdsPrimaryKey(), Title: title, Text: text, AuthorID: userId, DateCreating: now, DateUpdate: now, Published: false}
 	if Validator.Validate(ad) != nil {
 		return nil, ValidateError
@@ -80,7 +80,7 @@ func (a *appRepo) ChangeAdStatus(adId int64, userId int64, published bool) (*ads
 	}
 
 	ad.Published = published
-	ad.DateUpdate = time.Now()
+	ad.DateUpdate = time.Now().UTC()
 	if userId != ad.AuthorID {
 		return nil, IncorrectUserId
 	}
@@ -100,7 +100,7 @@ func (a *appRepo) UpdateAd(adId int64, userId int64, title string, text string) 
 
 	ad.Text = text
 	ad.Title = title
-	ad.DateUpdate = time.Now()
+	ad.DateUpdate = time.Now().UTC()
 	if userId != ad.AuthorID {
 		return nil, IncorrectUserId
 	}
@@ -121,8 +121,8 @@ func (a *appRepo) GetListAds(filters map[string]any) []ads.Ad {
 	return a.repository.GetAds(filters)
 }
 
-func (a *appRepo) GetListAdsByTitle(title string) []ads.Ad {
-	return a.repository.GetAdsByTitle(title)
+func (a *appRepo) GetListAdsByTitle(pattern string) []ads.Ad {
+	return a.repository.GetAdsByTitle(pattern)
 }
 
 func (a *appRepo) UpdateUser(userId int64, nickname string, email string) (*users.User, error) {

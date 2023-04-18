@@ -45,14 +45,6 @@ type createUpdateUserRequest struct {
 	Email    string `json:"email"`
 }
 
-type getListAdsRequest struct {
-	Filters map[string]any `json:"filters"`
-}
-
-type getListAdsByTitleRequest struct {
-	Title string `json:"title"`
-}
-
 func AdSuccessResponse(ad *ads.Ad) *gin.H {
 	return &gin.H{
 		"data": adResponse{

@@ -20,7 +20,8 @@ func TestGetAdsByTitle(t *testing.T) {
 	_, err = client.createAd(0, "hello", "friend")
 	assert.NoError(t, err)
 
-	response, err := client.listAdsByTitle("hello")
+	// "hel" is a prefix of "hello"
+	response, err := client.listAdsByTitle("hel")
 	assert.NoError(t, err)
 	assert.Len(t, response.Data, 2)
 	assert.Equal(t, response.Data[0].Title, "hello")

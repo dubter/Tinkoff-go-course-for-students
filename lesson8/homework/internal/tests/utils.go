@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"time"
 
 	"homework8/internal/adapters/adrepo"
@@ -182,16 +183,7 @@ func (tc *testClient) listAds() (adsResponse, error) {
 }
 
 func (tc *testClient) listAdsByTitle(title string) (adsResponse, error) {
-	body := map[string]any{
-		"title": title,
-	}
-
-	data, err := json.Marshal(body)
-	if err != nil {
-		return adsResponse{}, fmt.Errorf("unable to marshal: %w", err)
-	}
-
-	req, err := http.NewRequest(http.MethodPost, tc.baseURL+"/api/v1/ads/search_by_name", bytes.NewReader(data))
+	req, err := http.NewRequest(http.MethodGet, tc.baseURL+"/api/v1/ads/search/"+title, nil)
 	if err != nil {
 		return adsResponse{}, fmt.Errorf("unable to create request: %w", err)
 	}
@@ -208,16 +200,13 @@ func (tc *testClient) listAdsByTitle(title string) (adsResponse, error) {
 }
 
 func (tc *testClient) getListAdsWithFilter(filters map[string]any) (adsResponse, error) {
-	body := map[string]any{
-		"filters": filters,
+	v := url.Values{}
+	for str, filter := range filters {
+		v.Add(str, fmt.Sprintf("%v", filter))
 	}
+	queryString := v.Encode()
 
-	data, err := json.Marshal(body)
-	if err != nil {
-		return adsResponse{}, fmt.Errorf("unable to marshal: %w", err)
-	}
-
-	req, err := http.NewRequest(http.MethodPost, tc.baseURL+"/api/v1/ads/with_filter", bytes.NewReader(data))
+	req, err := http.NewRequest(http.MethodGet, tc.baseURL+"/api/v1/ads/with_filter"+"?"+queryString, nil)
 	if err != nil {
 		return adsResponse{}, fmt.Errorf("unable to create request: %w", err)
 	}

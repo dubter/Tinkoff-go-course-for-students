@@ -4,7 +4,8 @@ import (
 	"homework8/internal/ads"
 	"homework8/internal/app"
 	"homework8/internal/users"
-	"time"
+	"strings"
+	"sync"
 )
 
 const (
@@ -12,7 +13,6 @@ const (
 	userId       string = "user_id"
 	dateCreating string = "date_creating"
 	dateFormat   string = "2006-01-02"
-	layot        string = "2006-01-02T15:04:05Z07:00"
 )
 
 type repositoryMap struct {
@@ -22,6 +22,8 @@ type repositoryMap struct {
 
 	counterAds   int64
 	counterUsers int64
+
+	mu sync.Mutex
 }
 
 func (repo *repositoryMap) GetAdById(id int64) (ads.Ad, error) {
@@ -33,6 +35,9 @@ func (repo *repositoryMap) GetAdById(id int64) (ads.Ad, error) {
 }
 
 func (repo *repositoryMap) AddAd(ad *ads.Ad) {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
 	repo.dictAds[ad.ID] = *ad
 	repo.dictAdsByTitle[ad.Title] = append(repo.dictAdsByTitle[ad.Title], *ad)
 	repo.counterAds++
@@ -51,6 +56,9 @@ func (repo *repositoryMap) GetUsersPrimaryKey() int64 {
 }
 
 func (repo *repositoryMap) ChangeAd(ad *ads.Ad) bool {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
 	_, ok := repo.dictAds[ad.ID]
 	if ok {
 		repo.dictAds[ad.ID] = *ad
@@ -64,8 +72,15 @@ func (repo *repositoryMap) ChangeAd(ad *ads.Ad) bool {
 	return ok
 }
 
-func (repo *repositoryMap) GetAdsByTitle(title string) []ads.Ad {
-	return repo.dictAdsByTitle[title]
+func (repo *repositoryMap) GetAdsByTitle(pattern string) []ads.Ad {
+	var listByTitle []ads.Ad
+	for title, list := range repo.dictAdsByTitle {
+		if strings.HasPrefix(title, pattern) {
+			listByTitle = append(listByTitle, list...)
+		}
+	}
+
+	return listByTitle
 }
 
 func (repo *repositoryMap) GetAds(filters map[string]any) []ads.Ad {
@@ -106,7 +121,7 @@ func SelectByPublished(dict map[int64]ads.Ad, published any) map[int64]ads.Ad {
 func SelectByUserId(dict map[int64]ads.Ad, userId any) map[int64]ads.Ad {
 	repoWithFilter := make(map[int64]ads.Ad)
 	for id := range dict {
-		if float64(dict[id].AuthorID) == userId {
+		if dict[id].AuthorID == userId {
 			repoWithFilter[id] = dict[id]
 		}
 	}
@@ -116,9 +131,8 @@ func SelectByUserId(dict map[int64]ads.Ad, userId any) map[int64]ads.Ad {
 func SelectByDateCreating(dict map[int64]ads.Ad, dateCreating any) map[int64]ads.Ad {
 	repoWithFilter := make(map[int64]ads.Ad)
 	for id := range dict {
-		t, _ := time.Parse(layot, dateCreating.(string))
 		elem := dict[id].DateCreating.Format(dateFormat)
-		filter := t.Format(dateFormat)
+		filter := dateCreating.(string)[:10]
 		if elem == filter {
 			repoWithFilter[id] = dict[id]
 		}
@@ -135,11 +149,17 @@ func (repo *repositoryMap) GetUserById(id int64) (users.User, error) {
 }
 
 func (repo *repositoryMap) AddUser(user *users.User) {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
 	repo.dictUsers[user.ID] = *user
 	repo.counterUsers++
 }
 
 func (repo *repositoryMap) ChangeUser(user *users.User) bool {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
 	_, ok := repo.dictUsers[user.ID]
 	if ok {
 		repo.dictUsers[user.ID] = *user

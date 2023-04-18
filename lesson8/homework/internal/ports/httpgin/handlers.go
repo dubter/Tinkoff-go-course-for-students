@@ -3,10 +3,9 @@ package httpgin
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
+	"homework8/internal/app"
 	"net/http"
 	"strconv"
-
-	"homework8/internal/app"
 )
 
 // Метод для создания объявления (ad)
@@ -173,19 +172,32 @@ func updateUser(a app.App) gin.HandlerFunc {
 // Метод для получения списка выложенных объявлений
 func getListAds(a app.App) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var reqBody getListAdsRequest
-		err := c.Bind(&reqBody)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, ErrorResponse(err))
-			return
+		filters := make(map[string]any)
+		published := c.Query("published")
+		if published != "" {
+			if published == "true" {
+				filters["published"] = true
+			} else {
+				filters["published"] = false
+			}
 		}
 
-		ads := a.GetListAds(reqBody.Filters)
-
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, ErrorResponse(err))
-			return
+		userId := c.Query("user_id")
+		if userId != "" {
+			id, errToInt := strconv.Atoi(userId)
+			if errToInt != nil {
+				c.JSON(http.StatusBadRequest, ErrorResponse(errToInt))
+				return
+			}
+			filters["user_id"] = int64(id)
 		}
+
+		dateCreating := c.Query("date_creating")
+		if dateCreating != "" {
+			filters["date_creating"] = dateCreating
+		}
+
+		ads := a.GetListAds(filters)
 
 		c.JSON(http.StatusOK, AdsSuccessResponse(ads))
 	}
@@ -214,19 +226,8 @@ func getAd(a app.App) gin.HandlerFunc {
 // Метод для поиска объявлений по названию
 func getListAdsByTitle(a app.App) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var reqBody getListAdsByTitleRequest
-		err := c.Bind(&reqBody)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, ErrorResponse(err))
-			return
-		}
-
-		ads := a.GetListAdsByTitle(reqBody.Title)
-
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, ErrorResponse(err))
-			return
-		}
+		title := c.Param("ad_title")
+		ads := a.GetListAdsByTitle(title)
 
 		c.JSON(http.StatusOK, AdsSuccessResponse(ads))
 	}
