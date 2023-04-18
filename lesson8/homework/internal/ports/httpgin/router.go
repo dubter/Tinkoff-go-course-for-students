@@ -2,15 +2,12 @@ package httpgin
 
 import (
 	"github.com/gin-gonic/gin"
-	"log"
-	"os"
-
 	"homework8/internal/app"
 )
 
 func AppRouter(r *gin.RouterGroup, a app.App) {
-	r.Use(Logger())                                        // Middleware для логгирования всех запросов
-	r.Use(RecoveryWithLogger(log.New(os.Stdout, "\n", 0))) // Middleware для обработки panic с логгированием
+	r.Use(Logger())             // Middleware для логгирования всех запросов
+	r.Use(RecoveryWithLogger()) // Middleware для обработки panic с логгированием
 
 	adsR := r.Group("/ads")
 	adsR.POST("", createAd(a))                    // Метод для создания объявления (ad)

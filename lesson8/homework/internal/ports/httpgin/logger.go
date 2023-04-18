@@ -16,11 +16,11 @@ func Logger() gin.HandlerFunc {
 	}
 }
 
-func RecoveryWithLogger(logger *log.Logger) gin.HandlerFunc {
+func RecoveryWithLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
-				logger.Printf("panic occurred: %v", err)
+				log.Printf("panic occurred: %v", err)
 
 				c.AbortWithStatus(http.StatusInternalServerError)
 			}
