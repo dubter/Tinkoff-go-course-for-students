@@ -215,7 +215,7 @@ func getAd(a app.App) gin.HandlerFunc {
 
 		ad, ok := a.GetAd(int64(num))
 		if errors.Is(ok, app.IncorrectAdId) {
-			c.JSON(http.StatusForbidden, ErrorResponse(ok))
+			c.JSON(http.StatusNotFound, ErrorResponse(ok))
 			return
 		}
 
@@ -230,5 +230,81 @@ func getListAdsByTitle(a app.App) gin.HandlerFunc {
 		ads := a.GetListAdsByTitle(title)
 
 		c.JSON(http.StatusOK, AdsSuccessResponse(ads))
+	}
+}
+
+// Метод для вывода пользователя по id
+func getUser(a app.App) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userId := c.Param("user_id")
+		num, errToInt := strconv.Atoi(userId)
+		if errToInt != nil {
+			c.JSON(http.StatusBadRequest, ErrorResponse(errToInt))
+			return
+		}
+
+		user, ok := a.GetUser(int64(num))
+		if errors.Is(ok, app.IncorrectUserId) {
+			c.JSON(http.StatusNotFound, ErrorResponse(ok))
+			return
+		}
+
+		c.JSON(http.StatusOK, UserSuccessResponse(user))
+	}
+}
+
+// Метод для удаления объявления по id
+func deleteUser(a app.App) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userId := c.Param("user_id")
+		num, errToInt := strconv.Atoi(userId)
+		if errToInt != nil {
+			c.JSON(http.StatusBadRequest, ErrorResponse(errToInt))
+			return
+		}
+
+		ok := a.DeleteUser(int64(num))
+		if errors.Is(ok, app.IncorrectUserId) {
+			c.JSON(http.StatusNotFound, ErrorResponse(ok))
+			return
+		}
+
+		c.JSON(http.StatusOK, DeleteSuccessResponse())
+	}
+}
+
+// Метод для удаления объявления по id
+func deleteAd(a app.App) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var reqBody deleteAdRequest
+		err := c.Bind(&reqBody)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, ErrorResponse(err))
+			return
+		}
+
+		adId := c.Param("ad_id")
+		num, errToInt := strconv.Atoi(adId)
+		if errToInt != nil {
+			c.JSON(http.StatusBadRequest, ErrorResponse(errToInt))
+			return
+		}
+
+		ok := a.DeleteAd(int64(num), reqBody.UserID)
+		if errors.Is(ok, app.IncorrectAdId) {
+			c.JSON(http.StatusNotFound, ErrorResponse(ok))
+			return
+		}
+		if errors.Is(ok, app.IncorrectUserId) {
+			c.JSON(http.StatusForbidden, ErrorResponse(ok))
+			return
+		}
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, ErrorResponse(err))
+			return
+		}
+
+		c.JSON(http.StatusOK, DeleteSuccessResponse())
 	}
 }

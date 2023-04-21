@@ -166,3 +166,30 @@ func (repo *repositoryMap) ChangeUser(user *users.User) bool {
 	}
 	return ok
 }
+
+func (repo *repositoryMap) DeleteUser(userId int64) {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
+	delete(repo.dictUsers, userId)
+}
+
+func (repo *repositoryMap) DeleteAd(adId int64) {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
+	title := repo.dictAds[adId].Title
+
+	for idx, ad := range repo.dictAdsByTitle[title] {
+		if ad.ID == adId {
+			repo.dictAdsByTitle[title][idx] = repo.dictAdsByTitle[title][len(repo.dictAdsByTitle[title])-1]
+			repo.dictAdsByTitle[title] = repo.dictAdsByTitle[title][:len(repo.dictAdsByTitle[title])-1]
+			if len(repo.dictAdsByTitle[title]) == 0 {
+				delete(repo.dictAdsByTitle, title)
+			}
+			break
+		}
+	}
+
+	delete(repo.dictAds, adId)
+}

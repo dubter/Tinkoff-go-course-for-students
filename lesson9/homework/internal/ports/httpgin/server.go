@@ -8,23 +8,11 @@ import (
 	"homework9/internal/app"
 )
 
-type Server struct {
-	port string
-	app  *gin.Engine
-}
-
-func NewHTTPServer(port string, a app.App) Server {
+func NewHTTPServer(port string, a app.App) *http.Server {
 	gin.SetMode(gin.ReleaseMode)
-	s := Server{port: port, app: gin.New()}
-	api := s.app.Group("/api/v1")
+	handler := gin.New()
+	s := &http.Server{Addr: port, Handler: handler}
+	api := handler.Group("/api/v1")
 	AppRouter(api, a)
 	return s
-}
-
-func (s *Server) Listen() error {
-	return s.app.Run(s.port)
-}
-
-func (s *Server) Handler() http.Handler {
-	return s.app
 }

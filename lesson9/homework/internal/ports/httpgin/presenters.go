@@ -45,6 +45,10 @@ type createUpdateUserRequest struct {
 	Email    string `json:"email"`
 }
 
+type deleteAdRequest struct {
+	UserID int64 `json:"user_id"`
+}
+
 func AdSuccessResponse(ad *ads.Ad) *gin.H {
 	return &gin.H{
 		"data": adResponse{
@@ -94,6 +98,13 @@ func AdsSuccessResponse(a []ads.Ad) *gin.H {
 
 	return &gin.H{
 		"data":  response,
+		"error": nil,
+	}
+}
+
+func DeleteSuccessResponse() *gin.H {
+	return &gin.H{
+		"data":  "success",
 		"error": nil,
 	}
 }
