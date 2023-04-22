@@ -51,13 +51,13 @@ func main() {
 
 		defer func() {
 			grpcServer.GracefulStop()
-			_ = (*lis).Close()
+			_ = lis.Close()
 
 			close(errCh)
 		}()
 
 		go func() {
-			if err := grpcServer.Serve(*lis); err != nil {
+			if err := grpcServer.Serve(lis); err != nil {
 				errCh <- err
 			}
 		}()

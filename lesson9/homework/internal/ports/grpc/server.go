@@ -9,7 +9,7 @@ import (
 	"net"
 )
 
-func NewGRPCServer(port string, a app.App) (*grpc.Server, *net.Listener) {
+func NewGRPCServer(port string, a app.App) (*grpc.Server, net.Listener) {
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -19,7 +19,7 @@ func NewGRPCServer(port string, a app.App) (*grpc.Server, *net.Listener) {
 			Logger, PanicInterceptor)))
 	grpcClient := NewService(a)
 	RegisterAdServiceServer(grpcServer, grpcClient)
-	return grpcServer, &lis
+	return grpcServer, lis
 }
 
 func TestNewGRPCServer(sizeBuff int, a app.App) (*grpc.Server, *bufconn.Listener) {
