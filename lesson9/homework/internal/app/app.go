@@ -18,6 +18,7 @@ type App interface {
 	CreateAd(title string, text string, userId int64) (*ads.Ad, error)
 	ChangeAdStatus(adId int64, userId int64, published bool) (*ads.Ad, error)
 	UpdateAd(adId int64, userId int64, title string, text string) (*ads.Ad, error)
+	DeleteAd(adId int64, userId int64) error
 
 	GetAd(id int64) (*ads.Ad, error)
 	GetListAds(filters map[string]any) []ads.Ad
@@ -25,6 +26,8 @@ type App interface {
 
 	CreateUser(nickname string, email string) (*users.User, error)
 	UpdateUser(userId int64, nickname string, email string) (*users.User, error)
+	DeleteUser(userId int64) error
+	GetUser(userId int64) (*users.User, error)
 }
 
 type Repository interface {
@@ -40,6 +43,8 @@ type Repository interface {
 	AddUser(user *users.User)
 	ChangeUser(user *users.User) bool
 	GetUsersPrimaryKey() int64
+	DeleteAd(adId int64)
+	DeleteUser(uerId int64)
 }
 
 func NewApp(repo Repository) App {
@@ -139,4 +144,33 @@ func (a *appRepo) UpdateUser(userId int64, nickname string, email string) (*user
 
 	a.repository.ChangeUser(&user)
 	return &user, nil
+}
+
+func (a *appRepo) GetUser(userId int64) (*users.User, error) {
+	user, err := a.repository.GetUserById(userId)
+	return &user, err
+}
+
+func (a *appRepo) DeleteUser(userId int64) error {
+	_, err := a.repository.GetUserById(userId)
+	if err != nil {
+		return err
+	}
+
+	a.repository.DeleteUser(userId)
+	return nil
+}
+
+func (a *appRepo) DeleteAd(adId int64, userId int64) error {
+	ad, err := a.repository.GetAdById(adId)
+	if err != nil {
+		return err
+	}
+
+	if ad.AuthorID != userId {
+		return IncorrectUserId
+	}
+
+	a.repository.DeleteAd(adId)
+	return nil
 }
