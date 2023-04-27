@@ -12,8 +12,8 @@ func TestGRPCCreateUser(t *testing.T) {
 	res, err := client.CreateUser(ctx, &grpcPort.CreateUserRequest{Nickname: "Oleg", Email: "oleg@phystech.edu"})
 	assert.NoError(t, err, "client.GetUser")
 
-	assert.Equal(t, "Oleg", res.Nickname)
-	assert.Equal(t, "oleg@phystech.edu", res.Email)
+	assert.Equal(t, "Oleg", res.GetNickname())
+	assert.Equal(t, "oleg@phystech.edu", res.GetEmail())
 }
 
 func TestGRPCUpdateUser(t *testing.T) {
@@ -26,8 +26,8 @@ func TestGRPCUpdateUser(t *testing.T) {
 
 	response, err := client.UpdateUser(ctx, &grpcPort.UpdateUserRequest{UserId: 1, Nickname: "hello", Email: "hello@yandex.ru"})
 	assert.NoError(t, err)
-	assert.Equal(t, response.Nickname, "hello")
-	assert.Equal(t, response.Email, "hello@yandex.ru")
+	assert.Equal(t, response.GetNickname(), "hello")
+	assert.Equal(t, response.GetEmail(), "hello@yandex.ru")
 }
 
 func TestGRPCGetUser(t *testing.T) {
@@ -38,8 +38,8 @@ func TestGRPCGetUser(t *testing.T) {
 
 	resp, err := client.GetUser(ctx, &grpcPort.GetUserRequest{Id: 0})
 	assert.NoError(t, err)
-	assert.Zero(t, resp.Id)
-	assert.Equal(t, resp.Nickname, "og buda")
+	assert.Zero(t, resp.GetId())
+	assert.Equal(t, resp.GetNickname(), "og buda")
 	assert.Equal(t, resp.Email, "buda@phystech.edu")
 }
 
