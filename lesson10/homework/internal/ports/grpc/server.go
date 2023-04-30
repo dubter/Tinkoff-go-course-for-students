@@ -5,6 +5,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 	"homework10/internal/app"
+	"homework10/internal/ports/grpc/loggers"
+	"homework10/internal/ports/grpc/proto"
 	"log"
 	"net"
 )
@@ -16,9 +18,9 @@ func NewGRPCServer(port string, a app.App) (*grpc.Server, net.Listener) {
 	}
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(grpcmiddleware.ChainUnaryServer(
-			Logger, PanicInterceptor)))
+			loggers.Logger, loggers.PanicInterceptor)))
 	grpcClient := NewService(a)
-	RegisterAdServiceServer(grpcServer, grpcClient)
+	proto.RegisterAdServiceServer(grpcServer, grpcClient)
 	return grpcServer, lis
 }
 
@@ -27,8 +29,8 @@ func TestNewGRPCServer(sizeBuff int, a app.App) (*grpc.Server, *bufconn.Listener
 
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(grpcmiddleware.ChainUnaryServer(
-			Logger, PanicInterceptor)))
+			loggers.Logger, loggers.PanicInterceptor)))
 	grpcClient := NewService(a)
-	RegisterAdServiceServer(grpcServer, grpcClient)
+	proto.RegisterAdServiceServer(grpcServer, grpcClient)
 	return grpcServer, lis
 }

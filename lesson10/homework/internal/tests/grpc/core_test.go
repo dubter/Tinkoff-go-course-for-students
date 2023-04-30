@@ -8,12 +8,13 @@ import (
 	"homework10/internal/adapters/adrepo"
 	"homework10/internal/app"
 	grpcPort "homework10/internal/ports/grpc"
+	"homework10/internal/ports/grpc/proto"
 	"net"
 	"testing"
 	"time"
 )
 
-func getTestClient(t *testing.T) (grpcPort.AdServiceClient, context.Context) {
+func getTestClient(t *testing.T) (proto.AdServiceClient, context.Context) {
 	adApp := app.NewApp(adrepo.New())
 	srv, lis := grpcPort.TestNewGRPCServer(1024*1024, adApp)
 
@@ -45,6 +46,6 @@ func getTestClient(t *testing.T) (grpcPort.AdServiceClient, context.Context) {
 		_ = conn.Close()
 	})
 
-	client := grpcPort.NewAdServiceClient(conn)
+	client := proto.NewAdServiceClient(conn)
 	return client, ctx
 }

@@ -1,0 +1,1202 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>adrepo: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">homework10/internal/adapters/adrepo/repo.go (100.0%)</option>
+				
+				<option value="file1">homework10/internal/app/app.go (100.0%)</option>
+				
+				<option value="file2">homework10/internal/ports/grpc/handlers.go (100.0%)</option>
+				
+				<option value="file3">homework10/internal/ports/grpc/presenters.go (100.0%)</option>
+				
+				<option value="file4">homework10/internal/ports/grpc/server.go (0.0%)</option>
+				
+				<option value="file5">homework10/internal/ports/httpgin/handlers.go (76.2%)</option>
+				
+				<option value="file6">homework10/internal/ports/httpgin/presenters.go (100.0%)</option>
+				
+				<option value="file7">homework10/internal/ports/httpgin/router.go (100.0%)</option>
+				
+				<option value="file8">homework10/internal/ports/httpgin/server.go (100.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package adrepo
+
+import (
+        "homework10/internal/ads"
+        "homework10/internal/app"
+        "homework10/internal/users"
+        "strings"
+        "sync"
+)
+
+const (
+        published    string = "published"
+        userId       string = "user_id"
+        dateCreating string = "date_creating"
+        dateFormat   string = "2006-01-02"
+)
+
+type repositoryMap struct {
+        dictAds        map[int64]ads.Ad
+        dictUsers      map[int64]users.User
+        dictAdsByTitle map[string][]ads.Ad
+
+        counterAds   int64
+        counterUsers int64
+
+        mu sync.Mutex
+}
+
+func New() app.Repository <span class="cov8" title="1">{
+        return &amp;repositoryMap{dictAds: make(map[int64]ads.Ad), dictUsers: make(map[int64]users.User), dictAdsByTitle: make(map[string][]ads.Ad), counterAds: 0, counterUsers: 0}
+}</span>
+
+func (repo *repositoryMap) GetAdById(id int64) (ads.Ad, error) <span class="cov8" title="1">{
+        ad, ok := repo.dictAds[id]
+        if !ok </span><span class="cov8" title="1">{
+                return ad, app.IncorrectAdId
+        }</span>
+        <span class="cov8" title="1">return ad, nil</span>
+}
+
+func (repo *repositoryMap) AddAd(ad *ads.Ad) <span class="cov8" title="1">{
+        repo.mu.Lock()
+        defer repo.mu.Unlock()
+
+        repo.dictAds[ad.ID] = *ad
+        repo.dictAdsByTitle[ad.Title] = append(repo.dictAdsByTitle[ad.Title], *ad)
+        repo.counterAds++
+}</span>
+
+func (repo *repositoryMap) GetAdsPrimaryKey() int64 <span class="cov8" title="1">{
+        return repo.counterAds
+}</span>
+
+func (repo *repositoryMap) GetUsersPrimaryKey() int64 <span class="cov8" title="1">{
+        return repo.counterUsers
+}</span>
+
+func (repo *repositoryMap) ChangeAd(ad *ads.Ad) bool <span class="cov8" title="1">{
+        repo.mu.Lock()
+        defer repo.mu.Unlock()
+
+        _, ok := repo.dictAds[ad.ID]
+        if ok </span><span class="cov8" title="1">{
+                repo.dictAds[ad.ID] = *ad
+                for idx := range repo.dictAdsByTitle[ad.Title] </span><span class="cov8" title="1">{
+                        if repo.dictAdsByTitle[ad.Title][idx].ID == ad.ID </span><span class="cov8" title="1">{
+                                repo.dictAdsByTitle[ad.Title][idx] = *ad
+                                break</span>
+                        }
+                }
+        }
+        <span class="cov8" title="1">return ok</span>
+}
+
+func (repo *repositoryMap) GetAdsByTitle(pattern string) []ads.Ad <span class="cov8" title="1">{
+        var listByTitle []ads.Ad
+        for title, list := range repo.dictAdsByTitle </span><span class="cov8" title="1">{
+                if strings.HasPrefix(title, pattern) </span><span class="cov8" title="1">{
+                        listByTitle = append(listByTitle, list...)
+                }</span>
+        }
+
+        <span class="cov8" title="1">return listByTitle</span>
+}
+
+func (repo *repositoryMap) GetAds(filters map[string]any) []ads.Ad <span class="cov8" title="1">{
+        var list []ads.Ad
+        var selectedAds = repo.dictAds
+        if len(filters) == 0 </span><span class="cov8" title="1">{
+                selectedAds = SelectByPublished(selectedAds, true)
+        }</span> else<span class="cov8" title="1"> {
+                if filter, ok := filters[published]; ok </span><span class="cov8" title="1">{
+                        selectedAds = SelectByPublished(selectedAds, filter)
+                }</span>
+
+                <span class="cov8" title="1">if filter, ok := filters[userId]; ok </span><span class="cov8" title="1">{
+                        selectedAds = SelectByUserId(selectedAds, filter)
+                }</span>
+
+                <span class="cov8" title="1">if filter, ok := filters[dateCreating]; ok </span><span class="cov8" title="1">{
+                        selectedAds = SelectByDateCreating(selectedAds, filter)
+                }</span>
+        }
+
+        <span class="cov8" title="1">for _, val := range selectedAds </span><span class="cov8" title="1">{
+                list = append(list, val)
+        }</span>
+        <span class="cov8" title="1">return list</span>
+}
+
+func SelectByPublished(dict map[int64]ads.Ad, published any) map[int64]ads.Ad <span class="cov8" title="1">{
+        repoWithFilter := make(map[int64]ads.Ad)
+        for id := range dict </span><span class="cov8" title="1">{
+                if dict[id].Published == published </span><span class="cov8" title="1">{
+                        repoWithFilter[id] = dict[id]
+                }</span>
+        }
+        <span class="cov8" title="1">return repoWithFilter</span>
+}
+
+func SelectByUserId(dict map[int64]ads.Ad, userId any) map[int64]ads.Ad <span class="cov8" title="1">{
+        repoWithFilter := make(map[int64]ads.Ad)
+        for id := range dict </span><span class="cov8" title="1">{
+                if dict[id].AuthorID == userId </span><span class="cov8" title="1">{
+                        repoWithFilter[id] = dict[id]
+                }</span>
+        }
+        <span class="cov8" title="1">return repoWithFilter</span>
+}
+
+func SelectByDateCreating(dict map[int64]ads.Ad, dateCreating any) map[int64]ads.Ad <span class="cov8" title="1">{
+        repoWithFilter := make(map[int64]ads.Ad)
+        for id := range dict </span><span class="cov8" title="1">{
+                elem := dict[id].DateCreating.Format(dateFormat)
+                filter := dateCreating.(string)[:10]
+                if elem == filter </span><span class="cov8" title="1">{
+                        repoWithFilter[id] = dict[id]
+                }</span>
+        }
+        <span class="cov8" title="1">return repoWithFilter</span>
+}
+
+func (repo *repositoryMap) GetUserById(id int64) (users.User, error) <span class="cov8" title="1">{
+        user, ok := repo.dictUsers[id]
+        if !ok </span><span class="cov8" title="1">{
+                return user, app.IncorrectUserId
+        }</span>
+        <span class="cov8" title="1">return user, nil</span>
+}
+
+func (repo *repositoryMap) AddUser(user *users.User) <span class="cov8" title="1">{
+        repo.mu.Lock()
+        defer repo.mu.Unlock()
+
+        repo.dictUsers[user.ID] = *user
+        repo.counterUsers++
+}</span>
+
+func (repo *repositoryMap) ChangeUser(user *users.User) bool <span class="cov8" title="1">{
+        repo.mu.Lock()
+        defer repo.mu.Unlock()
+
+        _, ok := repo.dictUsers[user.ID]
+        if ok </span><span class="cov8" title="1">{
+                repo.dictUsers[user.ID] = *user
+        }</span>
+        <span class="cov8" title="1">return ok</span>
+}
+
+func (repo *repositoryMap) DeleteUser(userId int64) <span class="cov8" title="1">{
+        repo.mu.Lock()
+        defer repo.mu.Unlock()
+
+        delete(repo.dictUsers, userId)
+}</span>
+
+func (repo *repositoryMap) DeleteAd(adId int64) <span class="cov8" title="1">{
+        repo.mu.Lock()
+        defer repo.mu.Unlock()
+
+        title := repo.dictAds[adId].Title
+
+        for idx, ad := range repo.dictAdsByTitle[title] </span><span class="cov8" title="1">{
+                if ad.ID == adId </span><span class="cov8" title="1">{
+                        repo.dictAdsByTitle[title][idx] = repo.dictAdsByTitle[title][len(repo.dictAdsByTitle[title])-1]
+                        repo.dictAdsByTitle[title] = repo.dictAdsByTitle[title][:len(repo.dictAdsByTitle[title])-1]
+                        if len(repo.dictAdsByTitle[title]) == 0 </span><span class="cov8" title="1">{
+                                delete(repo.dictAdsByTitle, title)
+                        }</span>
+                        <span class="cov8" title="1">break</span>
+                }
+        }
+
+        <span class="cov8" title="1">delete(repo.dictAds, adId)</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package app
+
+import (
+        "errors"
+        "github.com/dubter/Validator"
+        "homework10/internal/ads"
+        "homework10/internal/users"
+        "time"
+)
+
+// some errors
+
+var IncorrectUserId = errors.New("incorrect user id")
+var ValidateError = errors.New("validation error")
+var IncorrectAdId = errors.New("id is not found")
+
+type App interface {
+        CreateAd(title string, text string, userId int64) (*ads.Ad, error)
+        ChangeAdStatus(adId int64, userId int64, published bool) (*ads.Ad, error)
+        UpdateAd(adId int64, userId int64, title string, text string) (*ads.Ad, error)
+        DeleteAd(adId int64, userId int64) error
+
+        GetAd(id int64) (*ads.Ad, error)
+        GetListAds(filters map[string]any) []ads.Ad
+        GetListAdsByTitle(pattern string) []ads.Ad
+
+        CreateUser(nickname string, email string) (*users.User, error)
+        UpdateUser(userId int64, nickname string, email string) (*users.User, error)
+        DeleteUser(userId int64) error
+        GetUser(userId int64) (*users.User, error)
+}
+
+type Repository interface {
+        GetAdById(id int64) (ads.Ad, error)
+        AddAd(ad *ads.Ad)
+        GetAdsPrimaryKey() int64
+        ChangeAd(ad *ads.Ad) bool
+
+        GetAds(filters map[string]any) []ads.Ad
+        GetAdsByTitle(pattern string) []ads.Ad
+
+        GetUserById(id int64) (users.User, error)
+        AddUser(user *users.User)
+        ChangeUser(user *users.User) bool
+        GetUsersPrimaryKey() int64
+        DeleteAd(adId int64)
+        DeleteUser(uerId int64)
+}
+
+func NewApp(repo Repository) App <span class="cov8" title="1">{
+        return &amp;appRepo{repo}
+}</span>
+
+type appRepo struct {
+        repository Repository
+}
+
+func (a *appRepo) CreateAd(title string, text string, userId int64) (*ads.Ad, error) <span class="cov8" title="1">{
+        if _, err := a.repository.GetUserById(userId); err != nil </span><span class="cov8" title="1">{
+                return nil, IncorrectUserId
+        }</span>
+        <span class="cov8" title="1">now := time.Now().UTC()
+        ad := ads.Ad{ID: a.repository.GetAdsPrimaryKey(), Title: title, Text: text, AuthorID: userId, DateCreating: now, DateUpdate: now, Published: false}
+        if Validator.Validate(ad) != nil </span><span class="cov8" title="1">{
+                return nil, ValidateError
+        }</span>
+        <span class="cov8" title="1">a.repository.AddAd(&amp;ad)
+        return &amp;ad, nil</span>
+}
+
+func (a *appRepo) CreateUser(nickname string, email string) (*users.User, error) <span class="cov8" title="1">{
+        user := users.User{ID: a.repository.GetUsersPrimaryKey(), Nickname: nickname, Email: email}
+        if Validator.Validate(user) != nil </span><span class="cov8" title="1">{
+                return nil, ValidateError
+        }</span>
+
+        <span class="cov8" title="1">a.repository.AddUser(&amp;user)
+        return &amp;user, nil</span>
+}
+
+func (a *appRepo) ChangeAdStatus(adId int64, userId int64, published bool) (*ads.Ad, error) <span class="cov8" title="1">{
+        ad, err := a.repository.GetAdById(adId)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">ad.Published = published
+        ad.DateUpdate = time.Now().UTC()
+        if userId != ad.AuthorID </span><span class="cov8" title="1">{
+                return nil, IncorrectUserId
+        }</span>
+        <span class="cov8" title="1">if Validator.Validate(ad) != nil </span><span class="cov8" title="1">{
+                return nil, ValidateError
+        }</span>
+
+        <span class="cov8" title="1">a.repository.ChangeAd(&amp;ad)
+        return &amp;ad, nil</span>
+}
+
+func (a *appRepo) UpdateAd(adId int64, userId int64, title string, text string) (*ads.Ad, error) <span class="cov8" title="1">{
+        ad, err := a.repository.GetAdById(adId)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">ad.Text = text
+        ad.Title = title
+        ad.DateUpdate = time.Now().UTC()
+        if userId != ad.AuthorID </span><span class="cov8" title="1">{
+                return nil, IncorrectUserId
+        }</span>
+        <span class="cov8" title="1">if Validator.Validate(ad) != nil </span><span class="cov8" title="1">{
+                return nil, ValidateError
+        }</span>
+
+        <span class="cov8" title="1">a.repository.ChangeAd(&amp;ad)
+        return &amp;ad, nil</span>
+}
+
+func (a *appRepo) GetAd(id int64) (*ads.Ad, error) <span class="cov8" title="1">{
+        ad, err := a.repository.GetAdById(id)
+        return &amp;ad, err
+}</span>
+
+func (a *appRepo) GetListAds(filters map[string]any) []ads.Ad <span class="cov8" title="1">{
+        return a.repository.GetAds(filters)
+}</span>
+
+func (a *appRepo) GetListAdsByTitle(pattern string) []ads.Ad <span class="cov8" title="1">{
+        return a.repository.GetAdsByTitle(pattern)
+}</span>
+
+func (a *appRepo) UpdateUser(userId int64, nickname string, email string) (*users.User, error) <span class="cov8" title="1">{
+        user, err := a.repository.GetUserById(userId)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">user.Nickname = nickname
+        user.Email = email
+        if Validator.Validate(user) != nil </span><span class="cov8" title="1">{
+                return nil, ValidateError
+        }</span>
+
+        <span class="cov8" title="1">a.repository.ChangeUser(&amp;user)
+        return &amp;user, nil</span>
+}
+
+func (a *appRepo) GetUser(userId int64) (*users.User, error) <span class="cov8" title="1">{
+        user, err := a.repository.GetUserById(userId)
+        return &amp;user, err
+}</span>
+
+func (a *appRepo) DeleteUser(userId int64) error <span class="cov8" title="1">{
+        _, err := a.repository.GetUserById(userId)
+        if err != nil </span><span class="cov8" title="1">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">a.repository.DeleteUser(userId)
+        return nil</span>
+}
+
+func (a *appRepo) DeleteAd(adId int64, userId int64) error <span class="cov8" title="1">{
+        ad, err := a.repository.GetAdById(adId)
+        if err != nil </span><span class="cov8" title="1">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">if ad.AuthorID != userId </span><span class="cov8" title="1">{
+                return IncorrectUserId
+        }</span>
+
+        <span class="cov8" title="1">a.repository.DeleteAd(adId)
+        return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package grpc
+
+import (
+        "context"
+        "errors"
+        "fmt"
+        "google.golang.org/grpc/codes"
+        "google.golang.org/grpc/status"
+        "google.golang.org/protobuf/types/known/emptypb"
+        "homework10/internal/app"
+        "homework10/internal/ports/grpc/proto"
+)
+
+var ErrValidate = status.New(codes.InvalidArgument, "validation error")
+var ErrIncorrectUserId = status.New(codes.PermissionDenied, "incorrect user id")
+var ErrIncorrectAdId = status.New(codes.NotFound, "id is not found")
+var OkStatus = status.New(codes.OK, "success")
+
+type AdService struct {
+        a app.App
+}
+
+func NewService(a app.App) *AdService <span class="cov8" title="1">{
+        return &amp;AdService{a}
+}</span>
+
+func (service *AdService) CreateAd(_ context.Context, req *proto.CreateAdRequest) (*proto.AdResponse, error) <span class="cov8" title="1">{
+        ad, ok := service.a.CreateAd(req.GetTitle(), req.GetText(), req.GetUserId())
+
+        if errors.Is(ok, app.ValidateError) </span><span class="cov8" title="1">{
+                return nil, ErrValidate.Err()
+        }</span>
+
+        <span class="cov8" title="1">if errors.Is(ok, app.IncorrectUserId) </span><span class="cov8" title="1">{
+                return nil, ErrIncorrectUserId.Err()
+        }</span>
+
+        <span class="cov8" title="1">return AdSuccessResponse(ad), OkStatus.Err()</span>
+}
+
+func (service *AdService) ChangeAdStatus(_ context.Context, req *proto.ChangeAdStatusRequest) (*proto.AdResponse, error) <span class="cov8" title="1">{
+        ad, ok := service.a.ChangeAdStatus(req.GetAdId(), req.GetUserId(), req.GetPublished())
+
+        if errors.Is(ok, app.IncorrectUserId) </span><span class="cov8" title="1">{
+                return nil, ErrIncorrectUserId.Err()
+        }</span>
+
+        <span class="cov8" title="1">return AdSuccessResponse(ad), OkStatus.Err()</span>
+}
+
+func (service *AdService) UpdateAd(_ context.Context, req *proto.UpdateAdRequest) (*proto.AdResponse, error) <span class="cov8" title="1">{
+        ad, ok := service.a.UpdateAd(req.GetAdId(), req.GetUserId(), req.GetTitle(), req.GetText())
+
+        if errors.Is(ok, app.ValidateError) </span><span class="cov8" title="1">{
+                return nil, ErrValidate.Err()
+        }</span>
+
+        <span class="cov8" title="1">if errors.Is(ok, app.IncorrectUserId) </span><span class="cov8" title="1">{
+                return nil, ErrIncorrectUserId.Err()
+        }</span>
+
+        <span class="cov8" title="1">return AdSuccessResponse(ad), OkStatus.Err()</span>
+}
+
+func (service *AdService) ListAdsWithFilter(_ context.Context, req *proto.GetListAdsWithFilterRequest) (*proto.ListAdResponse, error) <span class="cov8" title="1">{
+        filters := make(map[string]any)
+
+        if req.UserId != nil </span><span class="cov8" title="1">{
+                filters["user_id"] = *req.UserId
+        }</span>
+
+        <span class="cov8" title="1">if req.DateCreating != nil </span><span class="cov8" title="1">{
+                filters["date_creating"] = fmt.Sprint((*req.DateCreating).AsTime().UTC())
+        }</span>
+
+        <span class="cov8" title="1">if req.Published != nil </span><span class="cov8" title="1">{
+                filters["published"] = *req.Published
+        }</span>
+
+        <span class="cov8" title="1">list := service.a.GetListAds(filters)
+        return AdsSuccessResponse(list), OkStatus.Err()</span>
+}
+
+func (service *AdService) ListAdsByTitle(_ context.Context, req *proto.GetListAdsByTitleRequest) (*proto.ListAdResponse, error) <span class="cov8" title="1">{
+        list := service.a.GetListAdsByTitle(req.GetTitle())
+        return AdsSuccessResponse(list), OkStatus.Err()
+}</span>
+
+func (service *AdService) CreateUser(_ context.Context, req *proto.CreateUserRequest) (*proto.UserResponse, error) <span class="cov8" title="1">{
+        user, ok := service.a.CreateUser(req.GetNickname(), req.GetEmail())
+
+        if errors.Is(ok, app.ValidateError) </span><span class="cov8" title="1">{
+                return nil, ErrValidate.Err()
+        }</span>
+
+        <span class="cov8" title="1">return UserSuccessResponse(user), OkStatus.Err()</span>
+}
+
+func (service *AdService) UpdateUser(_ context.Context, req *proto.UpdateUserRequest) (*proto.UserResponse, error) <span class="cov8" title="1">{
+        user, ok := service.a.UpdateUser(req.GetUserId(), req.GetNickname(), req.GetEmail())
+
+        if errors.Is(ok, app.IncorrectUserId) </span><span class="cov8" title="1">{
+                return nil, ErrIncorrectUserId.Err()
+        }</span>
+
+        <span class="cov8" title="1">if errors.Is(ok, app.ValidateError) </span><span class="cov8" title="1">{
+                return nil, ErrValidate.Err()
+        }</span>
+
+        <span class="cov8" title="1">return UserSuccessResponse(user), OkStatus.Err()</span>
+}
+
+func (service *AdService) GetUser(_ context.Context, req *proto.GetUserRequest) (*proto.UserResponse, error) <span class="cov8" title="1">{
+        user, ok := service.a.GetUser(req.GetId())
+
+        if errors.Is(ok, app.IncorrectUserId) </span><span class="cov8" title="1">{
+                return nil, ErrIncorrectUserId.Err()
+        }</span>
+
+        <span class="cov8" title="1">return UserSuccessResponse(user), OkStatus.Err()</span>
+}
+
+func (service *AdService) DeleteUser(_ context.Context, req *proto.DeleteUserRequest) (*emptypb.Empty, error) <span class="cov8" title="1">{
+        ok := service.a.DeleteUser(req.GetId())
+
+        if errors.Is(ok, app.IncorrectUserId) </span><span class="cov8" title="1">{
+                return nil, ErrIncorrectUserId.Err()
+        }</span>
+
+        <span class="cov8" title="1">return new(emptypb.Empty), OkStatus.Err()</span>
+}
+
+func (service *AdService) DeleteAd(_ context.Context, req *proto.DeleteAdRequest) (*emptypb.Empty, error) <span class="cov8" title="1">{
+        ok := service.a.DeleteAd(req.GetAdId(), req.GetUserId())
+
+        if errors.Is(ok, app.IncorrectUserId) </span><span class="cov8" title="1">{
+                return nil, ErrIncorrectUserId.Err()
+        }</span>
+
+        <span class="cov8" title="1">if errors.Is(ok, app.IncorrectAdId) </span><span class="cov8" title="1">{
+                return nil, ErrIncorrectAdId.Err()
+        }</span>
+
+        <span class="cov8" title="1">return new(emptypb.Empty), OkStatus.Err()</span>
+}
+
+func (service *AdService) GetAd(_ context.Context, req *proto.GetAdRequest) (*proto.AdResponse, error) <span class="cov8" title="1">{
+        ad, ok := service.a.GetAd(req.GetAdId())
+
+        if errors.Is(ok, app.IncorrectAdId) </span><span class="cov8" title="1">{
+                return nil, ErrIncorrectAdId.Err()
+        }</span>
+
+        <span class="cov8" title="1">return AdSuccessResponse(ad), OkStatus.Err()</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package grpc
+
+import (
+        "google.golang.org/protobuf/types/known/timestamppb"
+        "homework10/internal/ads"
+        "homework10/internal/ports/grpc/proto"
+        "homework10/internal/users"
+)
+
+func AdSuccessResponse(ad *ads.Ad) *proto.AdResponse <span class="cov8" title="1">{
+        return &amp;proto.AdResponse{
+                Id:           ad.ID,
+                Title:        ad.Title,
+                Text:         ad.Text,
+                UserId:       ad.AuthorID,
+                Published:    ad.Published,
+                DateUpdate:   timestamppb.New(ad.DateUpdate),
+                DateCreating: timestamppb.New(ad.DateCreating),
+        }
+}</span>
+
+func UserSuccessResponse(user *users.User) *proto.UserResponse <span class="cov8" title="1">{
+        return &amp;proto.UserResponse{
+                Id:       user.ID,
+                Nickname: user.Nickname,
+                Email:    user.Email,
+        }
+}</span>
+
+func AdsSuccessResponse(list []ads.Ad) *proto.ListAdResponse <span class="cov8" title="1">{
+        var response proto.ListAdResponse
+
+        for _, v := range list </span><span class="cov8" title="1">{
+                response.List = append(response.List, AdSuccessResponse(&amp;v))
+        }</span>
+
+        <span class="cov8" title="1">return &amp;response</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package grpc
+
+import (
+        grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
+        "google.golang.org/grpc"
+        "google.golang.org/grpc/test/bufconn"
+        "homework10/internal/app"
+        "homework10/internal/ports/grpc/loggers"
+        "homework10/internal/ports/grpc/proto"
+        "log"
+        "net"
+)
+
+func NewGRPCServer(port string, a app.App) (*grpc.Server, net.Listener) <span class="cov0" title="0">{
+        lis, err := net.Listen("tcp", port)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("failed to listen: %v", err)
+        }</span>
+        <span class="cov0" title="0">grpcServer := grpc.NewServer(
+                grpc.UnaryInterceptor(grpcmiddleware.ChainUnaryServer(
+                        loggers.Logger, loggers.PanicInterceptor)))
+        grpcClient := NewService(a)
+        proto.RegisterAdServiceServer(grpcServer, grpcClient)
+        return grpcServer, lis</span>
+}
+
+func TestNewGRPCServer(sizeBuff int, a app.App) (*grpc.Server, *bufconn.Listener) <span class="cov0" title="0">{
+        lis := bufconn.Listen(sizeBuff)
+
+        grpcServer := grpc.NewServer(
+                grpc.UnaryInterceptor(grpcmiddleware.ChainUnaryServer(
+                        loggers.Logger, loggers.PanicInterceptor)))
+        grpcClient := NewService(a)
+        proto.RegisterAdServiceServer(grpcServer, grpcClient)
+        return grpcServer, lis
+}</span>
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package httpgin
+
+import (
+        "errors"
+        "github.com/gin-gonic/gin"
+        "homework10/internal/app"
+        "net/http"
+        "strconv"
+)
+
+// Метод для создания объявления (ad)
+func createAd(a app.App) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                var reqBody createAdRequest
+                err := c.Bind(&amp;reqBody)
+                if err != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusBadRequest, ErrorResponse(err))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">ad, ok := a.CreateAd(reqBody.Title, reqBody.Text, reqBody.UserID)
+
+                if errors.Is(ok, app.ValidateError) </span><span class="cov8" title="1">{
+                        c.JSON(http.StatusBadRequest, ErrorResponse(ok))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">if errors.Is(ok, app.IncorrectUserId) </span><span class="cov8" title="1">{
+                        c.JSON(http.StatusForbidden, ErrorResponse(ok))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusInternalServerError, ErrorResponse(err))
+                        return
+                }</span>
+                <span class="cov8" title="1">c.JSON(http.StatusOK, AdSuccessResponse(ad))</span>
+        }
+}
+
+// Метод для создания пользователя (user)
+func createUser(a app.App) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                var reqBody createUpdateUserRequest
+                err := c.Bind(&amp;reqBody)
+                if err != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusBadRequest, ErrorResponse(err))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">user, ok := a.CreateUser(reqBody.NickName, reqBody.Email)
+
+                if errors.Is(ok, app.ValidateError) </span><span class="cov8" title="1">{
+                        c.JSON(http.StatusBadRequest, ErrorResponse(ok))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusInternalServerError, ErrorResponse(err))
+                        return
+                }</span>
+                <span class="cov8" title="1">c.JSON(http.StatusOK, UserSuccessResponse(user))</span>
+        }
+}
+
+// Метод для изменения статуса объявления (опубликовано - Published = true или снято с публикации Published = false)
+func changeAdStatus(a app.App) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                var reqBody changeAdStatusRequest
+                err := c.Bind(&amp;reqBody)
+                if err != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusBadRequest, ErrorResponse(err))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">adID := c.Param("ad_id")
+                num, errToInt := strconv.Atoi(adID)
+                if errToInt != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusBadRequest, ErrorResponse(errToInt))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">ad, ok := a.ChangeAdStatus(int64(num), reqBody.UserID, reqBody.Published)
+                if errors.Is(ok, app.IncorrectUserId) </span><span class="cov8" title="1">{
+                        c.JSON(http.StatusForbidden, ErrorResponse(ok))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusInternalServerError, ErrorResponse(err))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">c.JSON(http.StatusOK, AdSuccessResponse(ad))</span>
+        }
+}
+
+// Метод для обновления текста(Text) или заголовка(Title) объявления
+func updateAd(a app.App) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                var reqBody updateAdRequest
+                err := c.Bind(&amp;reqBody)
+                if err != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusBadRequest, ErrorResponse(err))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">adID := c.Param("ad_id")
+                num, errToInt := strconv.Atoi(adID)
+                if errToInt != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusBadRequest, ErrorResponse(errToInt))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">ad, ok := a.UpdateAd(int64(num), reqBody.UserID, reqBody.Title, reqBody.Text)
+                if errors.Is(ok, app.IncorrectUserId) </span><span class="cov8" title="1">{
+                        c.JSON(http.StatusForbidden, ErrorResponse(ok))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">if errors.Is(ok, app.ValidateError) </span><span class="cov8" title="1">{
+                        c.JSON(http.StatusBadRequest, ErrorResponse(ok))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusInternalServerError, ErrorResponse(err))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">c.JSON(http.StatusOK, AdSuccessResponse(ad))</span>
+        }
+}
+
+// Метод для редактирования данных пользователя
+func updateUser(a app.App) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                var reqBody createUpdateUserRequest
+                err := c.Bind(&amp;reqBody)
+                if err != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusBadRequest, ErrorResponse(err))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">adID := c.Param("user_id")
+                num, errToInt := strconv.Atoi(adID)
+                if errToInt != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusBadRequest, ErrorResponse(errToInt))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">user, ok := a.UpdateUser(int64(num), reqBody.NickName, reqBody.Email)
+                if errors.Is(ok, app.IncorrectUserId) </span><span class="cov8" title="1">{
+                        c.JSON(http.StatusForbidden, ErrorResponse(ok))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">if errors.Is(ok, app.ValidateError) </span><span class="cov8" title="1">{
+                        c.JSON(http.StatusBadRequest, ErrorResponse(ok))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusInternalServerError, ErrorResponse(err))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">c.JSON(http.StatusOK, UserSuccessResponse(user))</span>
+        }
+}
+
+// Метод для получения списка выложенных объявлений
+func getListAds(a app.App) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                filters := make(map[string]any)
+                published := c.Query("published")
+                if published != "" </span><span class="cov8" title="1">{
+                        if published == "true" </span><span class="cov8" title="1">{
+                                filters["published"] = true
+                        }</span> else<span class="cov0" title="0"> {
+                                filters["published"] = false
+                        }</span>
+                }
+
+                <span class="cov8" title="1">userId := c.Query("user_id")
+                if userId != "" </span><span class="cov8" title="1">{
+                        id, errToInt := strconv.Atoi(userId)
+                        if errToInt != nil </span><span class="cov0" title="0">{
+                                c.JSON(http.StatusBadRequest, ErrorResponse(errToInt))
+                                return
+                        }</span>
+                        <span class="cov8" title="1">filters["user_id"] = int64(id)</span>
+                }
+
+                <span class="cov8" title="1">dateCreating := c.Query("date_creating")
+                if dateCreating != "" </span><span class="cov8" title="1">{
+                        filters["date_creating"] = dateCreating
+                }</span>
+
+                <span class="cov8" title="1">ads := a.GetListAds(filters)
+
+                c.JSON(http.StatusOK, AdsSuccessResponse(ads))</span>
+        }
+}
+
+// Метод для вывода объявления по id
+func getAd(a app.App) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                adID := c.Param("ad_id")
+                num, errToInt := strconv.Atoi(adID)
+                if errToInt != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusBadRequest, ErrorResponse(errToInt))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">ad, ok := a.GetAd(int64(num))
+                if errors.Is(ok, app.IncorrectAdId) </span><span class="cov8" title="1">{
+                        c.JSON(http.StatusNotFound, ErrorResponse(ok))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">c.JSON(http.StatusOK, AdSuccessResponse(ad))</span>
+        }
+}
+
+// Метод для поиска объявлений по названию
+func getListAdsByTitle(a app.App) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                title := c.Param("ad_title")
+                ads := a.GetListAdsByTitle(title)
+
+                c.JSON(http.StatusOK, AdsSuccessResponse(ads))
+        }</span>
+}
+
+// Метод для вывода пользователя по id
+func getUser(a app.App) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                userId := c.Param("user_id")
+                num, errToInt := strconv.Atoi(userId)
+                if errToInt != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusBadRequest, ErrorResponse(errToInt))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">user, ok := a.GetUser(int64(num))
+                if errors.Is(ok, app.IncorrectUserId) </span><span class="cov8" title="1">{
+                        c.JSON(http.StatusNotFound, ErrorResponse(ok))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">c.JSON(http.StatusOK, UserSuccessResponse(user))</span>
+        }
+}
+
+// Метод для удаления объявления по id
+func deleteUser(a app.App) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                userId := c.Param("user_id")
+                num, errToInt := strconv.Atoi(userId)
+                if errToInt != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusBadRequest, ErrorResponse(errToInt))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">ok := a.DeleteUser(int64(num))
+                if errors.Is(ok, app.IncorrectUserId) </span><span class="cov8" title="1">{
+                        c.JSON(http.StatusNotFound, ErrorResponse(ok))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">c.JSON(http.StatusOK, DeleteSuccessResponse())</span>
+        }
+}
+
+// Метод для удаления объявления по id
+func deleteAd(a app.App) gin.HandlerFunc <span class="cov8" title="1">{
+        return func(c *gin.Context) </span><span class="cov8" title="1">{
+                var reqBody deleteAdRequest
+                err := c.Bind(&amp;reqBody)
+                if err != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusBadRequest, ErrorResponse(err))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">adId := c.Param("ad_id")
+                num, errToInt := strconv.Atoi(adId)
+                if errToInt != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusBadRequest, ErrorResponse(errToInt))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">ok := a.DeleteAd(int64(num), reqBody.UserID)
+                if errors.Is(ok, app.IncorrectAdId) </span><span class="cov8" title="1">{
+                        c.JSON(http.StatusNotFound, ErrorResponse(ok))
+                        return
+                }</span>
+                <span class="cov8" title="1">if errors.Is(ok, app.IncorrectUserId) </span><span class="cov8" title="1">{
+                        c.JSON(http.StatusForbidden, ErrorResponse(ok))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                        c.JSON(http.StatusInternalServerError, ErrorResponse(err))
+                        return
+                }</span>
+
+                <span class="cov8" title="1">c.JSON(http.StatusOK, DeleteSuccessResponse())</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package httpgin
+
+import (
+        "github.com/gin-gonic/gin"
+        "homework10/internal/ads"
+        "homework10/internal/users"
+        "time"
+)
+
+type createAdRequest struct {
+        Title  string `json:"title"`
+        Text   string `json:"text"`
+        UserID int64  `json:"user_id"`
+}
+
+type adResponse struct {
+        ID           int64     `json:"id"`
+        Title        string    `json:"title"`
+        Text         string    `json:"text"`
+        AuthorID     int64     `json:"author_id"`
+        Published    bool      `json:"published"`
+        DateUpdate   time.Time `json:"date_update"`
+        DateCreating time.Time `json:"date_creating"`
+}
+
+type userResponse struct {
+        ID       int64  `json:"id"`
+        Nickname string `json:"nickname"`
+        Email    string `json:"email"`
+}
+
+type changeAdStatusRequest struct {
+        Published bool  `json:"published"`
+        UserID    int64 `json:"user_id"`
+}
+
+type updateAdRequest struct {
+        Title  string `json:"title"`
+        Text   string `json:"text"`
+        UserID int64  `json:"user_id"`
+}
+
+type createUpdateUserRequest struct {
+        NickName string `json:"nickname"`
+        Email    string `json:"email"`
+}
+
+type deleteAdRequest struct {
+        UserID int64 `json:"user_id"`
+}
+
+func AdSuccessResponse(ad *ads.Ad) *gin.H <span class="cov8" title="1">{
+        return &amp;gin.H{
+                "data": adResponse{
+                        ID:           ad.ID,
+                        Title:        ad.Title,
+                        Text:         ad.Text,
+                        AuthorID:     ad.AuthorID,
+                        Published:    ad.Published,
+                        DateUpdate:   ad.DateUpdate,
+                        DateCreating: ad.DateCreating,
+                },
+                "error": nil,
+        }
+}</span>
+
+func UserSuccessResponse(ad *users.User) *gin.H <span class="cov8" title="1">{
+        return &amp;gin.H{
+                "data": userResponse{
+                        ID:       ad.ID,
+                        Nickname: ad.Nickname,
+                        Email:    ad.Email,
+                },
+                "error": nil,
+        }
+}</span>
+
+func ErrorResponse(err error) *gin.H <span class="cov8" title="1">{
+        return &amp;gin.H{
+                "data":  nil,
+                "error": err.Error(),
+        }
+}</span>
+
+func AdsSuccessResponse(a []ads.Ad) *gin.H <span class="cov8" title="1">{
+        var response []adResponse
+        for i := range a </span><span class="cov8" title="1">{
+                response = append(response, adResponse{
+                        ID:           a[i].ID,
+                        Title:        a[i].Title,
+                        Text:         a[i].Text,
+                        AuthorID:     a[i].AuthorID,
+                        Published:    a[i].Published,
+                        DateUpdate:   a[i].DateUpdate,
+                        DateCreating: a[i].DateCreating,
+                })
+        }</span>
+
+        <span class="cov8" title="1">return &amp;gin.H{
+                "data":  response,
+                "error": nil,
+        }</span>
+}
+
+func DeleteSuccessResponse() *gin.H <span class="cov8" title="1">{
+        return &amp;gin.H{
+                "data":  "success",
+                "error": nil,
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package httpgin
+
+import (
+        "github.com/gin-gonic/gin"
+        "homework10/internal/app"
+        "homework10/internal/ports/httpgin/loggers"
+)
+
+func AppRouter(r *gin.RouterGroup, a app.App) <span class="cov8" title="1">{
+        r.Use(loggers.Logger())             // Middleware для логгирования всех запросов
+        r.Use(loggers.RecoveryWithLogger()) // Middleware для обработки panic с логгированием
+
+        adsR := r.Group("/ads")
+        adsR.POST("", createAd(a))                    // Метод для создания объявления (ad)
+        adsR.PUT("/:ad_id/status", changeAdStatus(a)) // Метод для изменения статуса объявления (опубликовано - Published = true или снято с публикации Published = false)
+        adsR.PUT("/:ad_id", updateAd(a))              // Метод для обновления текста(Text) или заголовка(Title) объявления
+        adsR.DELETE("/:ad_id", deleteAd(a))           // Метод для удаления объявления по id
+
+        adsR.GET("/:ad_id", getAd(a))                       // Метод для вывода объявления по id
+        adsR.GET("", getListAds(a))                         // Метод для вывода списка опубликаванных объявлений
+        adsR.GET("/with_filter", getListAds(a))             // Метод для вывода списка опубликаванных объявлений
+        adsR.GET("/search/:ad_title", getListAdsByTitle(a)) // Метод для поиска объявлений по названию
+
+        userR := r.Group("/users")
+        userR.POST("", createUser(a))            // Метод для создания пользователя (user)
+        userR.PUT("/:user_id", updateUser(a))    // Метод для редактирования данных пользователя
+        userR.GET("/:user_id", getUser(a))       // Метод для вывода пользователя по id
+        userR.DELETE("/:user_id", deleteUser(a)) // Метод для удаления пользователя id
+}</span>
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package httpgin
+
+import (
+        "net/http"
+
+        "github.com/gin-gonic/gin"
+
+        "homework10/internal/app"
+)
+
+func NewHTTPServer(port string, a app.App) *http.Server <span class="cov8" title="1">{
+        gin.SetMode(gin.ReleaseMode)
+        handler := gin.New()
+        s := &amp;http.Server{Addr: port, Handler: handler}
+        api := handler.Group("/api/v1")
+        AppRouter(api, a)
+        return s
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

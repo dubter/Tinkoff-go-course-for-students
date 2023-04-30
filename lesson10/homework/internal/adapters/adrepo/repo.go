@@ -26,6 +26,10 @@ type repositoryMap struct {
 	mu sync.Mutex
 }
 
+func New() app.Repository {
+	return &repositoryMap{dictAds: make(map[int64]ads.Ad), dictUsers: make(map[int64]users.User), dictAdsByTitle: make(map[string][]ads.Ad), counterAds: 0, counterUsers: 0}
+}
+
 func (repo *repositoryMap) GetAdById(id int64) (ads.Ad, error) {
 	ad, ok := repo.dictAds[id]
 	if !ok {
@@ -41,10 +45,6 @@ func (repo *repositoryMap) AddAd(ad *ads.Ad) {
 	repo.dictAds[ad.ID] = *ad
 	repo.dictAdsByTitle[ad.Title] = append(repo.dictAdsByTitle[ad.Title], *ad)
 	repo.counterAds++
-}
-
-func New() app.Repository {
-	return &repositoryMap{dictAds: make(map[int64]ads.Ad), dictUsers: make(map[int64]users.User), dictAdsByTitle: make(map[string][]ads.Ad), counterAds: 0, counterUsers: 0}
 }
 
 func (repo *repositoryMap) GetAdsPrimaryKey() int64 {
