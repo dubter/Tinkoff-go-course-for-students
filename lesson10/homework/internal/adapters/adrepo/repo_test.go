@@ -285,3 +285,31 @@ func FuzzGetAdById(f *testing.F) {
 		assert.Equal(t, got, expect)
 	})
 }
+
+type TestGetAd struct {
+	Id       int64
+	ExpectAd ads.Ad
+}
+
+func (s *RepositoryMapTestSuite) TestRepositoryMap_GetAdsTable() {
+	expectedAd1 := ads.Ad{ID: 1, Title: "Ad 1", Text: "Ad 1 description", AuthorID: 1, Published: true}
+	s.repo.AddAd(&expectedAd1)
+
+	expectedAd2 := ads.Ad{ID: 2, Title: "Ad 2", Text: "Ad 2 description", AuthorID: 2, Published: true}
+	s.repo.AddAd(&expectedAd2)
+
+	expectedAd3 := ads.Ad{ID: 3, Title: "Ad 3", Text: "Ad 3 description", AuthorID: 3, Published: false}
+	s.repo.AddAd(&expectedAd3)
+
+	tests := []TestGetAd{
+		{1, expectedAd1},
+		{2, expectedAd2},
+		{3, expectedAd3},
+	}
+
+	for _, test := range tests {
+		ad, err := s.repo.GetAdById(test.Id)
+		s.NoError(err)
+		s.Equal(ad, test.ExpectAd)
+	}
+}
