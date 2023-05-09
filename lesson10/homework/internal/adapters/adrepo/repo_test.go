@@ -1,6 +1,7 @@
 package adrepo
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"homework10/internal/ads"
@@ -308,8 +309,11 @@ func (s *RepositoryMapTestSuite) TestRepositoryMap_GetAdsTable() {
 	}
 
 	for _, test := range tests {
-		ad, err := s.repo.GetAdById(test.Id)
-		s.NoError(err)
-		s.Equal(ad, test.ExpectAd)
+		test := test // create a new variable for each test case to avoid variable shadowing
+		s.Run(fmt.Sprintf("Test case %d", test.Id), func() {
+			ad, err := s.repo.GetAdById(test.Id)
+			s.NoError(err)
+			s.Equal(ad, test.ExpectAd)
+		})
 	}
 }
